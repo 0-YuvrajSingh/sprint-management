@@ -1,0 +1,31 @@
+# Maven
+backend/*/target/
+backend/*/.classpath
+backend/*/.project
+backend/*/.settings/
+backend/*/.vscode/
+backend/*/*.iml
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.env.local
+.env.*.local

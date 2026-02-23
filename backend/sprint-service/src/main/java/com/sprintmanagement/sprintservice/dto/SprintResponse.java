@@ -15,7 +15,7 @@ public class SprintResponse {
     private SprintStatus status;
     private Integer velocity;
 
-    public SprintResponse() {
+    public SprintResponse(UUID id, String name, UUID projectId, LocalDateTime startDate, LocalDateTime endDate, SprintStatus status, Integer velocity) {
     }
 
     public UUID getId() {

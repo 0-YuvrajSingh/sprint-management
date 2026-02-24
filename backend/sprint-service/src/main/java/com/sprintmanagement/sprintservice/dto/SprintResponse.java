@@ -15,7 +15,20 @@ public class SprintResponse {
     private SprintStatus status;
     private Integer velocity;
 
-    public SprintResponse(UUID id, String name, UUID projectId, LocalDateTime startDate, LocalDateTime endDate, SprintStatus status, Integer velocity) {
+    public SprintResponse(UUID id,
+                          String name,
+                          UUID projectId,
+                          LocalDateTime startDate,
+                          LocalDateTime endDate,
+                          SprintStatus status,
+                          Integer velocity) {
+        this.id = id;
+        this.name = name;
+        this.projectId = projectId;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.status = status;
+        this.velocity = velocity;
     }
 
     public UUID getId() {
@@ -44,33 +57,5 @@ public class SprintResponse {
 
     public Integer getVelocity() {
         return velocity;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setProjectId(UUID projectId) {
-        this.projectId = projectId;
-    }
-
-    public void setStartDate(LocalDateTime startDate) {
-        this.startDate = startDate;
-    }
-
-    public void setEndDate(LocalDateTime endDate) {
-        this.endDate = endDate;
-    }
-
-    public void setStatus(SprintStatus status) {
-        this.status = status;
-    }
-
-    public void setVelocity(Integer velocity) {
-        this.velocity = velocity;
     }
 }

@@ -5,12 +5,21 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "sprints")
+@Table(
+        name = "sprints",
+        indexes = {
+                @Index(name = "idx_sprint_project", columnList = "projectId"),
+                @Index(name = "idx_sprint_status", columnList = "status")
+        }
+)
 public class Sprint {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @Version
+    private Long version;
 
     @Column(nullable = false, length = 150)
     private String name;
@@ -30,29 +39,64 @@ public class Sprint {
     @Column(nullable = false)
     private UUID projectId;
 
-    public UUID getId() { return id; }
+    public UUID getId() {
+        return id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public Long getVersion() {
+        return version;
+    }
 
-    public LocalDateTime getStartDate() { return startDate; }
-    public void setStartDate(LocalDateTime startDate) { this.startDate = startDate; }
+    public String getName() {
+        return name;
+    }
 
-    public LocalDateTime getEndDate() { return endDate; }
-    public void setEndDate(LocalDateTime endDate) { this.endDate = endDate; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public SprintStatus getStatus() { return status; }
-    public void setStatus(SprintStatus status) { this.status = status; }
+    public LocalDateTime getStartDate() {
+        return startDate;
+    }
 
-    public Integer getVelocity() { return velocity; }
-    public void setVelocity(Integer velocity) { this.velocity = velocity; }
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
 
-    public UUID getProjectId() { return projectId; }
-    public void setProjectId(UUID projectId) { this.projectId = projectId; }
+    public LocalDateTime getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
+    }
+
+    public SprintStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(SprintStatus status) {
+        this.status = status;
+    }
+
+    public Integer getVelocity() {
+        return velocity;
+    }
+
+    public void setVelocity(Integer velocity) {
+        this.velocity = velocity;
+    }
+
+    public UUID getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(UUID projectId) {
+        this.projectId = projectId;
+    }
 
     @PrePersist
-    void prePersist() {
-
+    private void prePersist() {
         if (this.startDate == null) {
             this.startDate = LocalDateTime.now();
         }
@@ -63,6 +107,13 @@ public class Sprint {
 
         if (this.status == null) {
             this.status = SprintStatus.PLANNED;
+        }
+    }
+
+    @PreUpdate
+    private void validateDates() {
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("End date cannot be before start date");
         }
     }
 }

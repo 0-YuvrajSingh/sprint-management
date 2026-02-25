@@ -5,10 +5,11 @@ import com.sprintmanagement.projectservice.dto.ProjectResponse;
 import com.sprintmanagement.projectservice.service.ProjectService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -23,8 +24,8 @@ public class ProjectController {
     }
 
     @GetMapping
-    public List<ProjectResponse> getAllProjects() {
-        return projectService.getAllProjects();
+    public Page<ProjectResponse> getAllProjects(Pageable pageable) {
+        return projectService.getAllProjects(pageable);
     }
 
     @PostMapping

@@ -5,10 +5,11 @@ import com.sprintmanagement.projectservice.dto.ProjectResponse;
 import com.sprintmanagement.projectservice.entity.Project;
 import com.sprintmanagement.projectservice.exception.ResourceNotFoundException;
 import com.sprintmanagement.projectservice.repository.ProjectRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -29,11 +30,9 @@ public class ProjectService {
         );
     }
 
-    public List<ProjectResponse> getAllProjects() {
-        return projectRepository.findAll()
-                .stream()
-                .map(this::map)
-                .toList();
+    public Page<ProjectResponse> getAllProjects(Pageable pageable) {
+        Page<Project> page = projectRepository.findAll(pageable);
+        return page.map(this::map);
     }
 
     public ProjectResponse getProjectById(UUID id) {
@@ -44,13 +43,8 @@ public class ProjectService {
     }
 
     public ProjectResponse createProject(ProjectRequest request) {
-
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Project name is required");
-        }
-
         Project project = new Project();
-        project.setName(request.getName());
+        project.setName(request.getName().trim());
         project.setDescription(request.getDescription());
         return map(projectRepository.save(project));
     }
@@ -63,10 +57,11 @@ public class ProjectService {
                         new ResourceNotFoundException("Project not found with id: " + id));
 
         if (request.getName() != null) {
-            if (request.getName().trim().length() < 3 || request.getName().trim().length() > 100) {
+            String trimmedName = request.getName().trim();
+            if (trimmedName.length() < 3 || trimmedName.length() > 100) {
                 throw new IllegalArgumentException("Name must be between 3 and 100 characters");
             }
-            project.setName(request.getName());
+            project.setName(trimmedName);
         }
 
         if (request.getDescription() != null) {

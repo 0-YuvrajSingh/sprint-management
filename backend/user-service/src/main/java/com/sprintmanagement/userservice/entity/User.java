@@ -2,6 +2,7 @@ package com.sprintmanagement.userservice.entity;
 
 import jakarta.persistence.*;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -26,11 +27,11 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @PrePersist
     public void prePersist() {
-        createdDate = LocalDateTime.now();
+        createdDate = Instant.now();
         if(this.role == null) {
             this.role = UserRole.DEVELOPER;
         }
@@ -56,7 +57,7 @@ public class User {
         return role;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -79,7 +80,7 @@ public class User {
         this.role = role;
     }
 
-    public void setCreatedDate(LocalDateTime createdDate) {
+    public void setCreatedDate(Instant createdDate) {
         this.createdDate = createdDate;
     }
 }

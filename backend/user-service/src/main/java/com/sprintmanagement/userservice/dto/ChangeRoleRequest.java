@@ -1,9 +1,11 @@
 package com.sprintmanagement.userservice.dto;
 
 import com.sprintmanagement.userservice.entity.UserRole;
+import jakarta.validation.constraints.NotNull;
 
 public class ChangeRoleRequest {
 
+    @NotNull
     private UserRole role;
 
     public ChangeRoleRequest() {}

@@ -3,6 +3,7 @@ package com.sprintmanagement.userservice.dto;
 import com.sprintmanagement.userservice.entity.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public class UserRequest {
@@ -19,7 +20,7 @@ public class UserRequest {
     @Size(min = 6, max = 100)
     private String password;
 
-    @NotBlank
+    @NotNull
     private UserRole role;
 
     public UserRequest() {}

@@ -1,7 +1,18 @@
 import type { ApiErrorResponse } from "./types";
 
-const DEFAULT_API_BASE_URL = "http://localhost:8080/api/v1";
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(/\/$/, "");
+const DEFAULT_PROJECT_API_BASE_URL = "http://localhost:8081/api/v1";
+const DEFAULT_SPRINT_API_BASE_URL = "http://localhost:8082/api/v1";
+const DEFAULT_USER_API_BASE_URL = "http://localhost:8083/api/v1";
+
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/$/, "");
+}
+
+export const API_BASE_URLS = {
+  projects: normalizeBaseUrl(import.meta.env.VITE_PROJECT_API_BASE_URL ?? DEFAULT_PROJECT_API_BASE_URL),
+  sprints: normalizeBaseUrl(import.meta.env.VITE_SPRINT_API_BASE_URL ?? DEFAULT_SPRINT_API_BASE_URL),
+  users: normalizeBaseUrl(import.meta.env.VITE_USER_API_BASE_URL ?? DEFAULT_USER_API_BASE_URL),
+} as const;
 
 function getErrorMessage(payload: ApiErrorResponse | string | null, fallback: string): string {
   if (!payload) {
@@ -16,10 +27,11 @@ function getErrorMessage(payload: ApiErrorResponse | string | null, fallback: st
 }
 
 export async function apiRequest<TResponse>(
+  baseUrl: string,
   path: string,
   options: RequestInit = {},
 ): Promise<TResponse> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${baseUrl}${path}`, {
     headers: {
       "Content-Type": "application/json",
       ...options.headers,

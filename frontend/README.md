@@ -13,14 +13,16 @@ React + TypeScript application for the Sprint Management platform.
 
 ## Configuration
 
-Set the API base URL with `VITE_API_BASE_URL`.
+Set the API base URLs with these variables.
 
 ```bash
 # .env.local
-VITE_API_BASE_URL=http://localhost:8080/api/v1
+VITE_PROJECT_API_BASE_URL=http://localhost:8081/api/v1
+VITE_SPRINT_API_BASE_URL=http://localhost:8082/api/v1
+VITE_USER_API_BASE_URL=http://localhost:8083/api/v1
 ```
 
-If not set, the app defaults to `http://localhost:8080/api/v1`.
+If not set, those same defaults are used.
 
 ## Install and run
 

@@ -1,15 +1,21 @@
-import { useEffect, useState } from "react";
+import { Navigate, Route, Routes } from "./router";
+import { Layout } from "./components/Layout";
+import { ProjectsPage } from "./pages/ProjectsPage";
+import { SprintsPage } from "./pages/SprintsPage";
+import { UsersPage } from "./pages/UsersPage";
+import "./App.css";
 
 function App() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    fetch("http://localhost:8080/api/v1/projects")
-      .then(res => res.text())
-      .then(data => setMessage(data));
-  }, []);
-
-  return <h1>{message}</h1>;
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Navigate to="/projects" replace />} />
+        <Route path="projects" element={<ProjectsPage />} />
+        <Route path="sprints" element={<SprintsPage />} />
+        <Route path="users" element={<UsersPage />} />
+      </Route>
+    </Routes>
+  );
 }
 
 export default App;

@@ -3,47 +3,44 @@ package com.sprintmanagement.projectservice.controller;
 import com.sprintmanagement.projectservice.dto.ProjectRequest;
 import com.sprintmanagement.projectservice.dto.ProjectResponse;
 import com.sprintmanagement.projectservice.service.ProjectService;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/projects")
-@Tag(name = "Projects", description = "Project management API")
+@RequiredArgsConstructor
 public class ProjectController {
 
     private final ProjectService projectService;
 
-    public ProjectController(ProjectService projectService) {
-        this.projectService = projectService;
-    }
-
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','DEVELOPER','VIEWER')")
     @GetMapping
     public Page<ProjectResponse> getAllProjects(Pageable pageable) {
         return projectService.getAllProjects(pageable);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ProjectResponse createProject(@Valid @RequestBody ProjectRequest projectRequest) {
-        return projectService.createProject(projectRequest);
+    public ProjectResponse createProject(@Valid @RequestBody ProjectRequest request) {
+        return projectService.createProject(request);
     }
 
-    @GetMapping("/{id}")
-    public ProjectResponse getProjectById(@PathVariable UUID id) {
-        return projectService.getProjectById(id);
-    }
-
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PatchMapping("/{id}")
-    public ProjectResponse updateProject(@PathVariable UUID id, @RequestBody ProjectRequest projectRequest) {
-        return projectService.updateProject(id, projectRequest);
+    public ProjectResponse updateProject(@PathVariable UUID id,
+                                         @RequestBody ProjectRequest request) {
+        return projectService.updateProject(id, request);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteProject(@PathVariable UUID id) {

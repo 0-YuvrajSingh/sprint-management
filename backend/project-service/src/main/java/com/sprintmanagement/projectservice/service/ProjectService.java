@@ -31,21 +31,24 @@ public class ProjectService {
     }
 
     public Page<ProjectResponse> getAllProjects(Pageable pageable) {
-        Page<Project> page = projectRepository.findAll(pageable);
-        return page.map(this::map);
+        return projectRepository.findAll(pageable)
+                .map(this::map);
     }
 
     public ProjectResponse getProjectById(UUID id) {
-        return projectRepository.findById(id)
-                .map(this::map)
+        Project project = projectRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Project not found with id: " + id));
+        return map(project);
     }
 
+    @Transactional
     public ProjectResponse createProject(ProjectRequest request) {
+
         Project project = new Project();
         project.setName(request.getName().trim());
         project.setDescription(request.getDescription());
+
         return map(projectRepository.save(project));
     }
 
@@ -57,30 +60,21 @@ public class ProjectService {
                         new ResourceNotFoundException("Project not found with id: " + id));
 
         if (request.getName() != null) {
-            String trimmedName = request.getName().trim();
-            if (trimmedName.length() < 3 || trimmedName.length() > 100) {
-                throw new IllegalArgumentException("Name must be between 3 and 100 characters");
-            }
-            project.setName(trimmedName);
+            project.setName(request.getName().trim());
         }
 
         if (request.getDescription() != null) {
-            if (request.getDescription().length() > 500) {
-                throw new IllegalArgumentException("Description cannot exceed 500 characters");
-            }
             project.setDescription(request.getDescription());
         }
 
-        Project updatedProject = projectRepository.save(project);
-        return map(updatedProject);
+        return map(project);
     }
 
     @Transactional
     public void deleteProject(UUID id) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Project not found with id: " + id));
-
-        projectRepository.delete(project);
+        if (!projectRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Project not found with id: " + id);
+        }
+        projectRepository.deleteById(id);
     }
 }

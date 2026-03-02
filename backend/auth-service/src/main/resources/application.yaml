@@ -1,12 +1,12 @@
 server:
-  port: 8081
+  port: 8080
 
 spring:
   application:
-    name: project-service
+    name: auth-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/projectdb
+    url: jdbc:postgresql://localhost:5432/authdb
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
@@ -20,3 +20,7 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+jwt:
+  secret: mySecretKeyForJWTTokenGenerationAndValidation2026
+  expiration: 86400000

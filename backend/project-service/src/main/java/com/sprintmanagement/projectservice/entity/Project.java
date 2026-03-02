@@ -9,7 +9,7 @@ import java.util.UUID;
 public class Project {
 
     @Id
-    @GeneratedValue(strategy =  GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false, length = 100)
@@ -21,15 +21,20 @@ public class Project {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    public Project() {}
+
     @PrePersist
     void prePersist() {
         this.createdAt = LocalDateTime.now();
     }
 
     public UUID getId() { return id; }
+
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

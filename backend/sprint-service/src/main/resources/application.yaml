@@ -1,9 +1,13 @@
 server:
-  port: 8082
+  port: 8084
 
 spring:
   application:
     name: sprint-service
+
+  security:
+    user:
+      password: disabled
 
   datasource:
     url: jdbc:postgresql://localhost:5432/sprintdb
@@ -32,3 +36,16 @@ springdoc:
 logging:
   level:
     org.springframework.security: INFO
+
+# ─── EUREKA ──────────────────────────────────────────────────────────────────
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+gateway:
+  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}

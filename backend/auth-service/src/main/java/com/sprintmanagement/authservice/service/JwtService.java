@@ -1,13 +1,17 @@
 package com.sprintmanagement.authservice.service;
 
-import com.sprintmanagement.authservice.entity.User;
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
+import java.security.Key;
+import java.util.Date;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.security.Key;
-import java.util.Date;
+import com.sprintmanagement.authservice.entity.User;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
@@ -54,7 +58,18 @@ public class JwtService {
                 .before(new Date());
     }
 
+    /**
+     * Returns {@code true} only if the token has a valid signature AND has not
+     * expired. Any parse or validation failure (tampered signature, malformed
+     * token, etc.) returns {@code false} rather than propagating an exception —
+     * callers treat it as untrusted.
+     */
     public boolean isTokenValid(String token) {
-        return !isTokenExpired(token);
+        try {
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            // Covers JwtException, IllegalArgumentException, and any other parse failure.
+            return false;
+        }
     }
 }

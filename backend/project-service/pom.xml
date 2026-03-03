@@ -98,6 +98,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Common Security -->
+        <dependency>
+            <groupId>com.sprintmanagement</groupId>
+            <artifactId>common-security</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
     </dependencies>
 
     <build>

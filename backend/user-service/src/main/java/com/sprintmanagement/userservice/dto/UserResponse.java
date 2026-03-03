@@ -1,10 +1,10 @@
 package com.sprintmanagement.userservice.dto;
 
-import com.sprintmanagement.userservice.entity.User;
-import com.sprintmanagement.userservice.entity.UserRole;
-
 import java.time.Instant;
 import java.util.UUID;
+
+import com.sprintmanagement.userservice.entity.User;
+import com.sprintmanagement.userservice.entity.UserRole;
 
 public class UserResponse {
 
@@ -25,6 +25,12 @@ public class UserResponse {
         this.createdDate = createdDate;
     }
 
+    /**
+     * Factory method — never expose JPA entities directly from REST endpoints.
+     *
+     * @param user the persisted entity; must not be null
+     * @return mapped DTO
+     */
     public static UserResponse fromEntity(User user) {
         if (user == null) {
             return null;
@@ -38,6 +44,7 @@ public class UserResponse {
         );
     }
 
+    // ── Getters & Setters ─────────────────────────────────────────────────────
     public UUID getId() {
         return id;
     }

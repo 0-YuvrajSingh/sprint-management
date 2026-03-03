@@ -5,17 +5,19 @@ import jakarta.validation.constraints.Size;
 
 public class UpdateUserRequest {
 
-    @Size(min = 6, max = 50)
+    @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
     private String name;
 
-    @Email
+    @Email(message = "Email must be a valid address")
     private String email;
 
-    @Size(min = 6, max = 100)
+    @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
     private String password;
 
-    public UpdateUserRequest() {}
+    public UpdateUserRequest() {
+    }
 
+    // ── Getters & Setters ─────────────────────────────────────────────────────
     public String getName() {
         return name;
     }

@@ -1,48 +1,89 @@
 server:
-  port: 9000
+  port: 8080
 
 spring:
   application:
     name: api-gateway
 
+  # Disable Spring Boot's default UserDetails auto-configuration — we use JWT auth.
+  security:
+    user:
+      password: disabled
+
   cloud:
     gateway:
       routes:
 
-        - id: auth-service
-          uri: lb://AUTH-SERVICE
+        # ─── AUTH SERVICE (public) ───────────────────────────────────────────
+        - id: auth-service-login
+          uri: lb://auth-service
           predicates:
-            - Path=/api/v1/auth/**
+            - Path=/auth/login
+          filters:
+            - RewritePath=/auth/login, /api/v1/auth/login
 
+        - id: auth-service-register
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/register
+          filters:
+            - RewritePath=/auth/register, /api/v1/auth/register
+
+        # ─── AUTH SERVICE (protected — any other /auth/** route) ─────────────
+        - id: auth-service-protected
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/**
+          filters:
+            - RewritePath=/auth/(?<segment>.*), /api/v1/auth/${segment}
+
+        # ─── PROJECT SERVICE ─────────────────────────────────────────────────
         - id: project-service
-          uri: lb://PROJECT-SERVICE
+          uri: lb://project-service
           predicates:
-            - Path=/api/v1/projects/**
+            - Path=/api/projects/**
 
+        # ─── SPRINT SERVICE ──────────────────────────────────────────────────
         - id: sprint-service
-          uri: lb://SPRINT-SERVICE
+          uri: lb://sprint-service
           predicates:
-            - Path=/api/v1/sprints/**
+            - Path=/api/sprints/**
 
-        - id: user-service
-          uri: lb://USER-SERVICE
-          predicates:
-            - Path=/api/v1/users/**
-
+        # ─── STORIES SERVICE ─────────────────────────────────────────────────
         - id: stories-service
-          uri: lb://STORIES-SERVICE
+          uri: lb://stories-service
           predicates:
-            - Path=/api/v1/stories/**
+            - Path=/api/stories/**
 
-        - id: analytics-service
-          uri: lb://ANALYTICS-SERVICE
+        # ─── USER SERVICE ────────────────────────────────────────────────────
+        - id: user-service
+          uri: lb://user-service
           predicates:
-            - Path=/api/v1/activity/**
+            - Path=/api/users/**
 
+        # ─── ACTIVITY SERVICE ────────────────────────────────────────────────────
+        - id: activity-service
+          uri: lb://activity-service
+          predicates:
+            - Path=/api/activities/**
+
+# ─── EUREKA ──────────────────────────────────────────────────────────────────
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
 
+# ─── SECRETS (move to env vars in production) ────────────────────────────────
 jwt:
-  secret: mySecretKeyForJWTTokenGenerationAndValidation2026
+  secret: ${JWT_SECRET:your-256-bit-secret-change-in-production}
+
+gateway:
+  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
+
+# ─── LOGGING ─────────────────────────────────────────────────────────────────
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.sprintmanagement.gateway: DEBUG

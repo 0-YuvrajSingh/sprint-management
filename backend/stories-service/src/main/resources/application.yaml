@@ -1,3 +1,43 @@
+server:
+  port: 8086
+
 spring:
   application:
     name: stories-service
+
+  # Disable Spring Boot's default UserDetails auto-configuration — we use header-based auth.
+  security:
+    user:
+      password: disabled
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/storiesdb
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# ─── EUREKA ──────────────────────────────────────────────────────────────────
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# ─── SECRETS (move to env vars in production) ────────────────────────────────
+gateway:
+  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
+
+# ─── LOGGING ─────────────────────────────────────────────────────────────────
+logging:
+  level:
+    com.sprintmanagement.storiesservice: DEBUG

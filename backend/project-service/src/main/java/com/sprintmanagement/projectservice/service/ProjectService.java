@@ -67,7 +67,7 @@ public class ProjectService {
             project.setDescription(request.getDescription());
         }
 
-        return map(project);
+        return map(projectRepository.save(project));
     }
 
     @Transactional

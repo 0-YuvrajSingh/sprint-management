@@ -5,24 +5,23 @@ spring:
   application:
     name: project-service
 
-  # Disable Spring Boot's default UserDetails auto-configuration — we use header-based auth.
   security:
     user:
       password: disabled
 
   datasource:
     url: jdbc:postgresql://localhost:5432/projectdb
-    username: postgres
-    password: postgres
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 eureka:
@@ -41,9 +40,8 @@ springdoc:
     tags-sorter: alpha
     try-it-out-enabled: true
 
-# Shared secret validated by HeaderAuthenticationFilter — must match the gateway value.
 gateway:
-  secret: your-gateway-secret-change-in-production
+  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
 
 logging:
   level:

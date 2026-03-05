@@ -7,17 +7,17 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/authdb
-    username: postgres
-    password: postgres
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 eureka:
@@ -36,10 +36,12 @@ springdoc:
     tags-sorter: alpha
     try-it-out-enabled: true
 
-# JWT secret and expiry used by JwtService to sign and validate tokens.
 jwt:
-  secret: mySecretKeyForJWTTokenGenerationAndValidation2026
+  secret: ${JWT_SECRET}
   expiration: 86400000
+
+gateway:
+  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
 
 logging:
   level:

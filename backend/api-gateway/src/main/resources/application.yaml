@@ -42,18 +42,24 @@ spring:
           uri: lb://project-service
           predicates:
             - Path=/api/projects/**
+          filters:
+            - RewritePath=/api/projects/(?<segment>.*), /api/v1/projects/${segment}
 
         # ─── SPRINT SERVICE ──────────────────────────────────────────────────
         - id: sprint-service
           uri: lb://sprint-service
           predicates:
             - Path=/api/sprints/**
+          filters:
+            - RewritePath=/api/sprints/(?<segment>.*), /api/v1/sprints/${segment}
 
         # ─── STORIES SERVICE ─────────────────────────────────────────────────
         - id: stories-service
           uri: lb://stories-service
           predicates:
             - Path=/api/stories/**
+          filters:
+            - RewritePath=/api/stories/(?<segment>.*), /api/v1/stories/${segment}
 
         # ─── USER SERVICE ────────────────────────────────────────────────────
         - id: user-service

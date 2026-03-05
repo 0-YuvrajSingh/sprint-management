@@ -1,5 +1,6 @@
 package com.example.api_gateway.filter;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.List;
 
@@ -21,22 +22,6 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import reactor.core.publisher.Mono;
 
-/**
- * Global filter that enforces JWT authentication at the gateway boundary.
- *
- * <p>For every inbound request this filter:
- * <ol>
- *   <li>Skips validation for public routes (login / register).</li>
- *   <li>Extracts and validates the {@code Authorization: Bearer <token>} header.</li>
- *   <li>Injects trusted identity headers ({@code X-User-Email}, {@code X-User-Role},
- *       {@code X-Gateway-Secret}) so downstream services can re-authenticate
- *       via {@code HeaderAuthenticationFilter} without touching the JWT again.</li>
- *   <li>Returns {@code 401 Unauthorized} for missing, expired, or tampered tokens.</li>
- * </ol>
- *
- * <p>WARN: The {@code gateway.secret} value MUST be kept in sync with every
- * downstream service's config — it is the shared proof of gateway origin.
- */
 @Component
 public class JwtGatewayFilter implements GlobalFilter, Ordered {
 
@@ -56,8 +41,6 @@ public class JwtGatewayFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        // PERF: Run before any route-specific filters so invalid tokens are
-        // rejected as early as possible, avoiding unnecessary downstream I/O.
         return -1;
     }
 
@@ -87,22 +70,24 @@ public class JwtGatewayFilter implements GlobalFilter, Ordered {
         }
 
         String email = claims.getSubject();
-        String role  = claims.get("role", String.class);
+        String role = claims.get("role", String.class);
 
         if (email == null || role == null) {
             log.warn("JWT missing required claims (sub/role) for path: {}", path);
             return unauthorised(exchange, "Token is missing required claims");
         }
 
-        // Mutate the request — add trusted identity headers for downstream services.
         ServerWebExchange mutatedExchange = exchange.mutate()
                 .request(r -> r
-                        .header("X-User-Email",      email)
-                        .header("X-User-Role",        role)
-                        .header("X-Gateway-Secret",   gatewaySecret)
-                        // Strip the original Authorization header — downstream services
-                        // authenticate via the injected headers, not JWT directly.
-                        .headers(headers -> headers.remove(HttpHeaders.AUTHORIZATION))
+                .headers(headers -> {
+                    headers.remove("X-User-Email");
+                    headers.remove("X-User-Role");
+                    headers.remove("X-Gateway-Secret");
+                    headers.remove(HttpHeaders.AUTHORIZATION);
+                })
+                .header("X-User-Email", email)
+                .header("X-User-Role", role)
+                .header("X-Gateway-Secret", gatewaySecret)
                 )
                 .build();
 
@@ -110,24 +95,23 @@ public class JwtGatewayFilter implements GlobalFilter, Ordered {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
     private boolean isPublicPath(String path) {
         return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
     }
 
     private Claims parseAndValidate(String token) {
-        Key signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        Key signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         return Jwts.parserBuilder()
                 .setSigningKey(signingKey)
                 .build()
-                .parseClaimsJws(token)  // throws JwtException if expired or tampered
+                .parseClaimsJws(token)
                 .getBody();
     }
 
     private Mono<Void> unauthorised(ServerWebExchange exchange, String message) {
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        byte[] body = ("{\"error\":\"" + message + "\"}").getBytes();
+        byte[] body = ("{\"error\":\"" + message + "\"}").getBytes(StandardCharsets.UTF_8);
         return exchange.getResponse()
                 .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(body)));
     }

@@ -4,7 +4,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,7 +30,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // ── Step 1: Verify request came from our gateway ──────────────────────
         String incomingSecret = request.getHeader("X-Gateway-Secret");
 
         if (!isValidGatewaySecret(incomingSecret)) {
@@ -40,7 +38,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ── Step 2: Extract identity headers (already trusted at this point) ──
         String email = request.getHeader("X-User-Email");
         String role  = request.getHeader("X-User-Role");
 
@@ -50,7 +47,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ── Step 3: Set authentication in SecurityContext ─────────────────────
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(

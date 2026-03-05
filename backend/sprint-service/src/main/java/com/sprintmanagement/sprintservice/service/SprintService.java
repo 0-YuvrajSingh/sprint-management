@@ -34,14 +34,6 @@ public class SprintService {
         );
     }
 
-    private SprintStatus parseStatus(String status) {
-        try {
-            return SprintStatus.valueOf(status.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid sprint status: " + status);
-        }
-    }
-
     public Page<SprintResponse> getSprints(UUID projectId,
                                            SprintStatus status,
                                            Pageable pageable) {
@@ -68,13 +60,14 @@ public class SprintService {
                         new ResourceNotFoundException("Sprint not found with id: " + id));
     }
 
+    @Transactional
     public SprintResponse createSprint(SprintRequest request) {
         Sprint sprint = new Sprint();
         sprint.setName(request.getName());
         sprint.setProjectId(request.getProjectId());
         sprint.setStartDate(request.getStartDate().atStartOfDay());
         sprint.setEndDate(request.getEndDate().atTime(23, 59, 59));
-        sprint.setStatus(parseStatus(request.getStatus()));
+        sprint.setStatus(request.getStatus());
         sprint.setVelocity(request.getVelocity());
 
         return map(sprintRepository.save(sprint));
@@ -100,14 +93,15 @@ public class SprintService {
             sprint.setEndDate(request.getEndDate().atTime(23, 59, 59));
 
         if (request.getStatus() != null)
-            sprint.setStatus(parseStatus(request.getStatus()));
+            sprint.setStatus(request.getStatus());
 
         if (request.getVelocity() != null)
             sprint.setVelocity(request.getVelocity());
 
-        return map(sprint);
+        return map(sprintRepository.save(sprint));
     }
 
+    @Transactional
     public void deleteSprint(UUID id) {
         if (!sprintRepository.existsById(id)) {
             throw new ResourceNotFoundException("Sprint not found with id: " + id);

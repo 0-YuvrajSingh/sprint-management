@@ -58,17 +58,10 @@ public class JwtService {
                 .before(new Date());
     }
 
-    /**
-     * Returns {@code true} only if the token has a valid signature AND has not
-     * expired. Any parse or validation failure (tampered signature, malformed
-     * token, etc.) returns {@code false} rather than propagating an exception —
-     * callers treat it as untrusted.
-     */
     public boolean isTokenValid(String token) {
         try {
             return !isTokenExpired(token);
         } catch (Exception e) {
-            // Covers JwtException, IllegalArgumentException, and any other parse failure.
             return false;
         }
     }

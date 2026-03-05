@@ -25,12 +25,6 @@ public class UserResponse {
         this.createdDate = createdDate;
     }
 
-    /**
-     * Factory method — never expose JPA entities directly from REST endpoints.
-     *
-     * @param user the persisted entity; must not be null
-     * @return mapped DTO
-     */
     public static UserResponse fromEntity(User user) {
         if (user == null) {
             return null;

@@ -40,7 +40,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-            // Check SecurityContext first — avoids parsing the JWT on already-authenticated requests.
             if (SecurityContextHolder.getContext().getAuthentication() == null
                     && jwtService.isTokenValid(token)) {
 
@@ -62,7 +61,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
         } catch (Exception e) {
-            // Any unexpected failure — pass through and let Spring Security deny the request.
             filterChain.doFilter(request, response);
             return;
         }

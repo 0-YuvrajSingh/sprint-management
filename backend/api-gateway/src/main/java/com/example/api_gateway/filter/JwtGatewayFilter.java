@@ -27,7 +27,7 @@ public class JwtGatewayFilter implements GlobalFilter, Ordered {
 
     private static final Logger log = LoggerFactory.getLogger(JwtGatewayFilter.class);
 
-    // Routes that are accessible without a valid JWT token.
+    // ── Public paths (no JWT required) ──────────────────────────────────────
     private static final List<String> PUBLIC_PATHS = List.of(
             "/auth/login",
             "/auth/register"

@@ -11,13 +11,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * Centralized error handling for auth-service.
- *
- * <p>
- * Converts domain exceptions into consistent JSON error responses rather than
- * leaking stack traces or Spring's default error format.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -31,14 +24,12 @@ public class GlobalExceptionHandler {
         return errorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
-    // Handles @Valid failures on request bodies — returns each field error keyed by field name.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
                 .collect(Collectors.toMap(
                         FieldError::getField,
                         fe -> fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "invalid",
-                        // Last write wins when the same field has multiple violations.
                         (existing, replacement) -> replacement
                 ));
 

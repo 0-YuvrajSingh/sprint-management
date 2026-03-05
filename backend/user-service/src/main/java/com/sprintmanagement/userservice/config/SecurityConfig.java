@@ -13,21 +13,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import com.sprintmanagement.common.security.HeaderAuthenticationFilter;
 
-/**
- * Security configuration for user-service.
- *
- * <p>
- * All inbound requests must pass through the API gateway, which validates the
- * JWT and forwards trusted identity headers (X-User-Email, X-User-Role,
- * X-Gateway-Secret). {@link HeaderAuthenticationFilter} re-authenticates those
- * headers on every request so downstream Spring Security method-level
- * annotations ({@code @PreAuthorize}) work.
- */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    // WARN: Must match the gateway.secret configured in the API gateway.
     @Value("${gateway.secret}")
     private String gatewaySecret;
 
@@ -50,7 +39,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // BCrypt encoder exposed as a bean so UserService can hash passwords before persistence.
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();

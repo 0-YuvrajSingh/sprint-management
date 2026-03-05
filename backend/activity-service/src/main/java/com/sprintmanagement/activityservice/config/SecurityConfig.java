@@ -12,21 +12,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import com.sprintmanagement.common.security.HeaderAuthenticationFilter;
 
-/**
- * Security configuration for activity-service.
- *
- * <p>
- * All inbound requests must pass through the API gateway, which validates the
- * JWT and forwards trusted identity headers (X-User-Email, X-User-Role,
- * X-Gateway-Secret). {@link HeaderAuthenticationFilter} re-authenticates those
- * headers on every request so downstream Spring Security method-level
- * annotations ({@code @PreAuthorize}) work.
- */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    // Injected from application.yaml — must match the gateway's configured secret.
     @Value("${gateway.secret}")
     private String gatewaySecret;
 

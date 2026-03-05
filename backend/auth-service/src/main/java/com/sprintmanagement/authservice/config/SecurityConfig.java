@@ -18,19 +18,6 @@ import com.sprintmanagement.authservice.security.CustomAccessDeniedHandler;
 import com.sprintmanagement.authservice.security.CustomAuthenticationEntryPoint;
 import com.sprintmanagement.authservice.security.JwtAuthenticationFilter;
 
-/**
- * Security configuration for auth-service.
- *
- * <p>
- * Unlike other microservices, auth-service handles the actual login/register
- * flow and issues JWTs. It does NOT use HeaderAuthenticationFilter — instead it
- * applies its own {@link JwtAuthenticationFilter} to protect non-public
- * endpoints.
- *
- * <p>
- * {@code /api/v1/auth/**} is open so the gateway can forward unauthenticated
- * login and register requests directly to this service.
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -48,7 +35,6 @@ public class SecurityConfig {
                 .sessionManagement(session
                         -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                // Auth endpoints are public — all other routes require a valid JWT.
                 .authorizeHttpRequests(auth
                         -> auth.requestMatchers("/api/v1/auth/**").permitAll()
                         .anyRequest().authenticated()
@@ -58,7 +44,6 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                // Disable form and basic auth — this service is stateless / JWT-only.
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .build();

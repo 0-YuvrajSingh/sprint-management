@@ -19,7 +19,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
 
     private final String gatewaySecret;
 
-    // Injected via constructor — each service passes its own @Value
     public HeaderAuthenticationFilter(String gatewaySecret) {
         this.gatewaySecret = gatewaySecret;
     }
@@ -62,10 +61,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /**
-     * Constant-time comparison to prevent timing attacks.
-     * Never use .equals() for secret comparison.
-     */
     private boolean isValidGatewaySecret(String incoming) {
         if (incoming == null || gatewaySecret == null) return false;
         return MessageDigest.isEqual(

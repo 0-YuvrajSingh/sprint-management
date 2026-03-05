@@ -65,7 +65,6 @@ public class UserService {
             log.debug("Created user id={} email={}", saved.getId(), saved.getEmail());
             return UserResponse.fromEntity(saved);
         } catch (DataIntegrityViolationException ex) {
-            // WARN: race-condition guard — unique constraint still catches concurrent inserts.
             throw new ResourceConflictException("Email already exists");
         }
     }

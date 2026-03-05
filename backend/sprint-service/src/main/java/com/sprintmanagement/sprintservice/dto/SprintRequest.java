@@ -1,5 +1,6 @@
 package com.sprintmanagement.sprintservice.dto;
 
+import com.sprintmanagement.sprintservice.entity.SprintStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -20,8 +21,8 @@ public class SprintRequest {
     @NotNull(message = "End date is required")
     private LocalDate endDate;
 
-    @NotBlank(message = "Status is required")
-    private String status;
+    @NotNull(message = "Status is required")
+    private SprintStatus status;
 
     @NotNull(message = "Velocity is required")
     private Integer velocity;
@@ -45,7 +46,7 @@ public class SprintRequest {
         return endDate;
     }
 
-    public String getStatus() {
+    public SprintStatus getStatus() {
         return status;
     }
 
@@ -69,7 +70,7 @@ public class SprintRequest {
         this.endDate = endDate;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(SprintStatus status) {
         this.status = status;
     }
 

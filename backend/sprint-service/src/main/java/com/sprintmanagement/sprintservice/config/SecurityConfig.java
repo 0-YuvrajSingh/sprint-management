@@ -3,29 +3,21 @@ package com.sprintmanagement.sprintservice.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.sprintmanagement.common.security.HeaderAuthenticationFilter;
 
-/**
- * Security configuration for sprint-service.
- *
- * <p>
- * All inbound requests must pass through the API gateway, which validates the
- * JWT and forwards trusted identity headers (X-User-Email, X-User-Role,
- * X-Gateway-Secret). {@link HeaderAuthenticationFilter} re-authenticates those
- * headers on every request so downstream Spring Security method-level
- * annotations ({@code @PreAuthorize}) work.
- */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
-    // Injected from application.yaml — must match the gateway's configured secret.
     @Value("${gateway.secret}")
     private String gatewaySecret;
 
@@ -37,9 +29,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> {
-                })
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(headerAuthenticationFilter(),

@@ -16,7 +16,7 @@ public class OpenApiConfig {
     public OpenAPI sprintServiceOpenAPI() {
         return new OpenAPI()
                 .servers(List.of(
-                        new Server().url("http://localhost:8082")
+                        new Server().url("http://localhost:8084")
                 ))
                 .info(new Info()
                         .title("Sprint Service API")

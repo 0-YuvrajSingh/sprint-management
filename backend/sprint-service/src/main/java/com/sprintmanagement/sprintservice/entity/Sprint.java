@@ -97,16 +97,11 @@ public class Sprint {
 
     @PrePersist
     private void prePersist() {
-        if (this.startDate == null) {
-            this.startDate = LocalDateTime.now();
-        }
-
-        if (this.endDate == null) {
-            this.endDate = this.startDate.plusWeeks(2);
-        }
-
         if (this.status == null) {
             this.status = SprintStatus.PLANNED;
+        }
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("End date cannot be before start date");
         }
     }
 

@@ -1,15 +1,25 @@
 package com.sprintmanagement.activityservice.dto;
 
-import com.sprintmanagement.activityservice.entity.Activity.ActionType;
-import com.sprintmanagement.activityservice.entity.Activity.TargetType;
-import lombok.*;
 import java.time.LocalDateTime;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+import com.sprintmanagement.activityservice.entity.Activity.ActionType;
+import com.sprintmanagement.activityservice.entity.Activity.TargetType;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ActivityResponse {
+
     private Long id;
     private String userEmail;
-    private String userId;
     private ActionType actionType;
     private TargetType targetType;
     private String targetId;

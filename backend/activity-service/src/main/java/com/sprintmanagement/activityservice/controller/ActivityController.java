@@ -1,16 +1,25 @@
 package com.sprintmanagement.activityservice.controller;
 
-import com.sprintmanagement.activityservice.dto.ActivityRequest;
-import com.sprintmanagement.activityservice.entity.Activity;
-import com.sprintmanagement.activityservice.entity.Activity.TargetType;
-import com.sprintmanagement.activityservice.service.ActivityService;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.sprintmanagement.activityservice.dto.ActivityRequest;
+import com.sprintmanagement.activityservice.dto.ActivityResponse;
+import com.sprintmanagement.activityservice.entity.Activity.TargetType;
+import com.sprintmanagement.activityservice.service.ActivityService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -21,33 +30,34 @@ public class ActivityController {
 
     // ── Log an activity (called by other services) ────────────────────────────
     @PostMapping
-    public ResponseEntity<Activity> log(
+    public ResponseEntity<ActivityResponse> log(
             @RequestBody ActivityRequest request,
             Authentication authentication) {
 
-        // Email and userId come from HeaderAuthenticationFilter via SecurityContext
         String userEmail = authentication.getName();
-        String userId    = userEmail; // or store separately if needed
-
-        Activity saved = activityService.log(userEmail, userId, request);
+        ActivityResponse saved = activityService.log(userEmail, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     // ── Get activities by user email ──────────────────────────────────────────
     @GetMapping
-    public ResponseEntity<List<Activity>> getByUser(
+    public ResponseEntity<?> getActivities(
             @RequestParam(required = false) String userEmail,
             @RequestParam(required = false) TargetType targetType,
-            @RequestParam(required = false) String targetId) {
+            @RequestParam(required = false) String targetId,
+            Pageable pageable) {
 
         if (userEmail != null) {
-            return ResponseEntity.ok(activityService.getByUser(userEmail));
+            List<ActivityResponse> results = activityService.getByUser(userEmail);
+            return ResponseEntity.ok(results);
         }
 
         if (targetType != null && targetId != null) {
-            return ResponseEntity.ok(activityService.getByTarget(targetType, targetId));
+            List<ActivityResponse> results = activityService.getByTarget(targetType, targetId);
+            return ResponseEntity.ok(results);
         }
 
-        return ResponseEntity.ok(activityService.getAll());
+        Page<ActivityResponse> page = activityService.getAll(pageable);
+        return ResponseEntity.ok(page);
     }
 }

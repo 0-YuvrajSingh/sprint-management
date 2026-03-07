@@ -77,7 +77,6 @@ public class AuthService {
             UserProfileRequest body = new UserProfileRequest(
                     req.getName(),
                     req.getEmail(),
-                    req.getPassword(),
                     req.getRole().name()
             );
 

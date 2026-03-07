@@ -17,20 +17,15 @@ public class UserRequest {
     @Email(message = "Email must be a valid address")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
-    private String password;
-
     @NotNull(message = "Role is required")
     private UserRole role;
 
     public UserRequest() {
     }
 
-    public UserRequest(String name, String email, String password, UserRole role) {
+    public UserRequest(String name, String email, UserRole role) {
         this.name = name;
         this.email = email;
-        this.password = password;
         this.role = role;
     }
 
@@ -43,10 +38,6 @@ public class UserRequest {
         return email;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
     public UserRole getRole() {
         return role;
     }
@@ -57,10 +48,6 @@ public class UserRequest {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public void setRole(UserRole role) {

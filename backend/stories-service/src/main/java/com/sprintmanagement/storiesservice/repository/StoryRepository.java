@@ -18,4 +18,8 @@ public interface StoryRepository extends JpaRepository<Story, UUID> {
     Page<Story> findBySprintId(UUID sprintId, Pageable pageable);
 
     Page<Story> findByProjectIdAndStatus(UUID projectId, StoryStatus status, Pageable pageable);
+
+    Page<Story> findByProjectIdAndSprintId(UUID projectId, UUID sprintId, Pageable pageable);
+
+    Page<Story> findByProjectIdAndSprintIdAndStatus(UUID projectId, UUID sprintId, StoryStatus status, Pageable pageable);
 }

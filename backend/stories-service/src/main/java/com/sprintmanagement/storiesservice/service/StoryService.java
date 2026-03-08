@@ -28,6 +28,14 @@ public class StoryService {
     public Page<StoryResponse> getStories(UUID projectId, UUID sprintId,
             StoryStatus status, Pageable pageable) {
 
+        if (projectId != null && sprintId != null && status != null) {
+            return storyRepository.findByProjectIdAndSprintIdAndStatus(projectId, sprintId, status, pageable)
+                    .map(StoryResponse::fromEntity);
+        }
+        if (projectId != null && sprintId != null) {
+            return storyRepository.findByProjectIdAndSprintId(projectId, sprintId, pageable)
+                    .map(StoryResponse::fromEntity);
+        }
         if (projectId != null && status != null) {
             return storyRepository.findByProjectIdAndStatus(projectId, status, pageable)
                     .map(StoryResponse::fromEntity);

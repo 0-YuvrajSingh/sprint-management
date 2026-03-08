@@ -26,6 +26,12 @@ public class ProjectController {
         return projectService.getAllProjects(pageable);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','DEVELOPER','VIEWER')")
+    @GetMapping("/{id}")
+    public ProjectResponse getProjectById(@PathVariable UUID id) {
+        return projectService.getProjectById(id);
+    }
+
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

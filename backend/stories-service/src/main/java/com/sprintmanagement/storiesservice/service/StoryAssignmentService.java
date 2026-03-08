@@ -1,6 +1,8 @@
 package com.sprintmanagement.storiesservice.service;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,14 @@ public class StoryAssignmentService {
             StoryRepository storyRepository) {
         this.assignmentRepository = assignmentRepository;
         this.storyRepository = storyRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<StoryAssignmentResponse> getAssignmentsByStory(UUID storyId) {
+        verifyStoryExists(storyId);
+        return assignmentRepository.findByStoryId(storyId).stream()
+                .map(StoryAssignmentResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 
     @Transactional

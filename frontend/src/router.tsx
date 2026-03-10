@@ -1,156 +1,81 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { AnchorHTMLAttributes, ReactElement, ReactNode } from "react";
+import { createBrowserRouter, Navigate } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-interface RouterContextValue {
-  path: string;
-  navigate: (to: string, replace?: boolean) => void;
-}
+// Pages
+// These are imported directly — no lazy loading for now
+// Add React.lazy() later if bundle size becomes a concern
+import LoginPage     from "./pages/LoginPage";
+import ProjectsPage  from "./pages/ProjectsPage";
+import SprintsPage   from "./pages/SprintsPage";
+import StoriesPage   from "./pages/StoriesPage";
+import UsersPage     from "./pages/UsersPage";
 
-const RouterContext = createContext<RouterContextValue | null>(null);
-const OutletContext = createContext<ReactNode>(null);
+// ================================================================
+// ROUTER
+// Structure:
+//   /login          → public, no token needed
+//   /               → redirect to /projects
+//   /projects       → protected, all roles
+//   /sprints        → protected, all roles
+//   /stories        → protected, all roles
+//   /users          → protected, ADMIN only
+// ================================================================
 
-function useRouterContext(): RouterContextValue {
-  const context = useContext(RouterContext);
-  if (!context) {
-    throw new Error("Router primitives must be used within <BrowserRouter>.");
-  }
-  return context;
-}
+const router = createBrowserRouter([
 
-function normalizePath(path: string): string {
-  if (!path.startsWith("/")) {
-    return `/${path}`;
-  }
-  return path;
-}
+  // ── Public routes ─────────────────────────────────────────
+  {
+    path: "/login",
+    element: <LoginPage />,
+  },
 
-export function BrowserRouter({ children }: { children: ReactNode }) {
-  const [path, setPath] = useState(window.location.pathname || "/");
+  // ── Root redirect ─────────────────────────────────────────
+  // Visiting "/" goes straight to projects
+  {
+    path: "/",
+    element: <Navigate to="/projects" replace />,
+  },
 
-  useEffect(() => {
-    const onPopState = () => setPath(window.location.pathname || "/");
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
-
-  const context = useMemo<RouterContextValue>(
-    () => ({
-      path,
-      navigate: (to: string, replace = false) => {
-        const normalized = normalizePath(to);
-        if (replace) {
-          window.history.replaceState({}, "", normalized);
-        } else {
-          window.history.pushState({}, "", normalized);
-        }
-        setPath(normalized);
+  // ── Protected routes — all authenticated users ─────────────
+  // ProtectedRoute wraps these — unauthenticated users go to /login
+  // <Outlet /> in ProtectedRoute renders whichever child matches
+  {
+    element: <ProtectedRoute />,
+    children: [
+      {
+        path: "/projects",
+        element: <ProjectsPage />,
       },
-    }),
-    [path],
-  );
+      {
+        path: "/sprints",
+        element: <SprintsPage />,
+      },
+      {
+        path: "/stories",
+        element: <StoriesPage />,
+      },
+    ],
+  },
 
-  return <RouterContext.Provider value={context}>{children}</RouterContext.Provider>;
-}
+  // ── Protected routes — ADMIN only ─────────────────────────
+  // Non-admins who try to access /users get redirected to /projects
+  {
+    element: <ProtectedRoute allowedRoles={["ADMIN"]} />,
+    children: [
+      {
+        path: "/users",
+        element: <UsersPage />,
+      },
+    ],
+  },
 
-type NavLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "className" | "href"> & {
-  to: string;
-  className?: string | ((args: { isActive: boolean }) => string);
-};
+  // ── 404 fallback ──────────────────────────────────────────
+  // Any unknown path redirects to projects
+  {
+    path: "*",
+    element: <Navigate to="/projects" replace />,
+  },
 
-export function NavLink({ to, className, onClick, children, ...props }: NavLinkProps) {
-  const { path, navigate } = useRouterContext();
-  const target = normalizePath(to);
-  const isActive = path === target;
+]);
 
-  const resolvedClassName = typeof className === "function" ? className({ isActive }) : className;
-
-  return (
-    <a
-      href={target}
-      className={resolvedClassName}
-      onClick={(event) => {
-        event.preventDefault();
-        navigate(target);
-        onClick?.(event);
-      }}
-      {...props}
-    >
-      {children}
-    </a>
-  );
-}
-
-export function Navigate({ to, replace = false }: { to: string; replace?: boolean }) {
-  const { navigate } = useRouterContext();
-
-  useEffect(() => {
-    navigate(to, replace);
-  }, [navigate, replace, to]);
-
-  return null;
-}
-
-export function Route({}: { path?: string; index?: boolean; element: ReactElement; children?: ReactElement[] | ReactElement }) {
-  return null;
-}
-
-interface MatchResult {
-  element: ReactElement;
-  outlet: ReactNode;
-}
-
-function matchRoute(path: string, route: ReactElement, basePath = ""): MatchResult | null {
-  const routeProps = route.props as { path?: string; index?: boolean; element: ReactElement; children?: ReactNode };
-  const fullPath = routeProps.path
-    ? normalizePath(`${basePath}/${routeProps.path}`.replace(/\/+/g, "/"))
-    : normalizePath(basePath || "/");
-
-  if (routeProps.index && path === fullPath) {
-    return { element: routeProps.element, outlet: null };
-  }
-
-  if (routeProps.path && path === fullPath) {
-    return { element: routeProps.element, outlet: null };
-  }
-
-  const children = Array.isArray(routeProps.children)
-    ? routeProps.children
-    : routeProps.children
-      ? [routeProps.children]
-      : [];
-
-  for (const child of children) {
-    if (!child || typeof child !== "object") {
-      continue;
-    }
-
-    const childMatch = matchRoute(path, child as ReactElement, fullPath);
-    if (childMatch) {
-      return { element: routeProps.element, outlet: childMatch.element };
-    }
-  }
-
-  return null;
-}
-
-export function Routes({ children }: { children: ReactNode }) {
-  const { path } = useRouterContext();
-  const routes = Array.isArray(children) ? children : [children];
-
-  for (const route of routes) {
-    if (!route || typeof route !== "object") {
-      continue;
-    }
-
-    const match = matchRoute(path, route as ReactElement);
-    if (match) {
-      return <OutletContext.Provider value={match.outlet}>{match.element}</OutletContext.Provider>;
-    }
-  }
-
-  return null;
-}
-
-export function Outlet() {
-  return <>{useContext(OutletContext)}</>;
-}
+export default router;

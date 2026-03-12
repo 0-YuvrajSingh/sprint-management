@@ -11,6 +11,10 @@ spring:
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   jpa:
     hibernate:
       ddl-auto: validate
@@ -37,7 +41,8 @@ springdoc:
     try-it-out-enabled: true
 
 jwt:
-  secret: ${JWT_SECRET}
+  # Local default prevents startup failure when JWT_SECRET is unset; override in real environments.
+  secret: ${JWT_SECRET:dev-only-jwt-secret-change-me-32-plus-chars-long}
   expiration: 86400000
 
 gateway:

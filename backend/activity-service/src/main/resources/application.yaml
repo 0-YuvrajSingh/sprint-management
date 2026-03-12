@@ -15,7 +15,13 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
-
+    
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # Create a baseline entry if the schema already exists (no Flyway history table yet)
+    baseline-on-migrate: true
+    baseline-version: 0
   jpa:
     hibernate:
       ddl-auto: validate
@@ -44,6 +50,10 @@ springdoc:
 # Shared secret validated by HeaderAuthenticationFilter — must match the gateway value.
 gateway:
   secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
+
+# JWT secret used by common-security for token parsing/validation.
+jwt:
+  secret: ${JWT_SECRET:your-jwt-secret-change-in-production}
 
 logging:
   level:

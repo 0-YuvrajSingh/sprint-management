@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +20,7 @@ import com.sprintmanagement.activityservice.dto.ActivityResponse;
 import com.sprintmanagement.activityservice.entity.Activity.TargetType;
 import com.sprintmanagement.activityservice.service.ActivityService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -29,9 +31,10 @@ public class ActivityController {
     private final ActivityService activityService;
 
     // ── Log an activity (called by other services) ────────────────────────────
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','DEVELOPER','VIEWER')")
     @PostMapping
     public ResponseEntity<ActivityResponse> log(
-            @RequestBody ActivityRequest request,
+            @Valid @RequestBody ActivityRequest request,
             Authentication authentication) {
 
         String userEmail = authentication.getName();
@@ -40,6 +43,7 @@ public class ActivityController {
     }
 
     // ── Get activities by user email ──────────────────────────────────────────
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','DEVELOPER','VIEWER')")
     @GetMapping
     public ResponseEntity<?> getActivities(
             @RequestParam(required = false) String userEmail,

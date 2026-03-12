@@ -20,6 +20,8 @@
 		<maven.compiler.source>${java.version}</maven.compiler.source>
 		<maven.compiler.target>${java.version}</maven.compiler.target>
 		<jjwt.version>0.11.5</jjwt.version>
+		<!-- Override Spring Boot 3.3.5 managed 10.10.0 which does not support PostgreSQL 18.x -->
+		<flyway.version>10.21.0</flyway.version>
 	</properties>
 
 	<dependencies>
@@ -97,6 +99,16 @@
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
+		</dependency>
+
+		<!-- Flyway Migration-->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 	</dependencies>
 	<dependencyManagement>

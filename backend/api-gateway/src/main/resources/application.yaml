@@ -92,4 +92,4 @@ gateway:
 logging:
   level:
     org.springframework.cloud.gateway: INFO
-    com.sprintmanagement.gateway: DEBUG
+    com.example.api_gateway: DEBUG

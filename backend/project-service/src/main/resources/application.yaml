@@ -8,12 +8,18 @@ spring:
   security:
     user:
       password: disabled
-
+      
   datasource:
     url: jdbc:postgresql://localhost:5432/projectdb
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
 
   jpa:
     hibernate:
@@ -23,6 +29,12 @@ spring:
       hibernate:
         format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
 
 eureka:
   client:
@@ -39,6 +51,9 @@ springdoc:
     operations-sorter: method
     tags-sorter: alpha
     try-it-out-enabled: true
+
+jwt:
+  secret: ${JWT_SECRET:your-jwt-secret-change-in-production}
 
 gateway:
   secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}

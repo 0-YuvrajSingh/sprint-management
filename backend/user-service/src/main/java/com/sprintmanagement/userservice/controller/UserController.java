@@ -63,6 +63,7 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/role")
     public ResponseEntity<UserResponse> changeRole(
             @PathVariable UUID id,
@@ -70,6 +71,7 @@ public class UserController {
         return ResponseEntity.ok(userService.changeRole(id, request.getRole()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);

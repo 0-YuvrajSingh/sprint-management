@@ -59,7 +59,6 @@ public class StoryService {
                         -> new ResourceNotFoundException("Story not found with id: " + id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Transactional
     public StoryResponse createStory(StoryRequest request) {
         Story story = new Story();
@@ -75,7 +74,6 @@ public class StoryService {
         return StoryResponse.fromEntity(storyRepository.save(story));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Transactional
     public StoryResponse updateStory(UUID id, StoryRequest request) {
         Story story = storyRepository.findById(id)
@@ -107,12 +105,12 @@ public class StoryService {
         return StoryResponse.fromEntity(storyRepository.save(story));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteStory(UUID id) {
-        if (!storyRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Story not found with id: " + id);
-        }
-        storyRepository.deleteById(id);
+
+        Story story = storyRepository.findById(id)
+                .orElseThrow(()
+                        -> new ResourceNotFoundException("Story not found with id: " + id));
+        storyRepository.delete(story);
     }
 }

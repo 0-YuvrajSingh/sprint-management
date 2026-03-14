@@ -81,7 +81,6 @@ public class UserService {
         return UserResponse.fromEntity(user);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('MANAGER') and #newRole.name() != 'ADMIN')")
     public UserResponse changeRole(UUID id, UserRole newRole) {
         User user = requireUser(id);
         user.setRole(newRole);
@@ -89,7 +88,6 @@ public class UserService {
         return UserResponse.fromEntity(user);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     public void deleteUser(UUID id) {
         User user = requireUser(id);
         userRepository.delete(user);

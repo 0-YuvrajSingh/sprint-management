@@ -6,7 +6,7 @@
 -- ================================================================
 
 CREATE TABLE IF NOT EXISTS users (
-    id       BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id       BIGINT       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     email    VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     role     VARCHAR(20)  NOT NULL DEFAULT 'VIEWER',

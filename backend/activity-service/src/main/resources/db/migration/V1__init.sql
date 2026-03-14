@@ -8,7 +8,7 @@
 --       no updatedAt — audit log rows are never updated
 -- ================================================================
 
-CREATE TABLE IF NOT EXISTS activity (
+CREATE TABLE IF NOT EXISTS activities (
     id           BIGINT       NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_email   VARCHAR(255) NOT NULL,
     action_type  VARCHAR(30)  NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS activity (
 );
 
 -- Query patterns: by user, by target, by time range
-CREATE INDEX IF NOT EXISTS idx_activity_user_email  ON activity (user_email);
-CREATE INDEX IF NOT EXISTS idx_activity_target      ON activity (target_type, target_id);
-CREATE INDEX IF NOT EXISTS idx_activity_timestamp   ON activity (timestamp);
-CREATE INDEX IF NOT EXISTS idx_activity_action_type ON activity (action_type);
+CREATE INDEX IF NOT EXISTS idx_activity_user_email  ON activities (user_email);
+CREATE INDEX IF NOT EXISTS idx_activity_target      ON activities (target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_activity_timestamp   ON activities (timestamp);
+CREATE INDEX IF NOT EXISTS idx_activity_action_type ON activities (action_type);

@@ -6,7 +6,7 @@
 
 CREATE TABLE IF NOT EXISTS stories (
     id             UUID         NOT NULL PRIMARY KEY,
-    title          VARCHAR(255) NOT NULL,
+    title          VARCHAR(200) NOT NULL,
     description    TEXT,
     status         VARCHAR(20)  NOT NULL DEFAULT 'BACKLOG',
     priority       VARCHAR(20)  NOT NULL DEFAULT 'MEDIUM',

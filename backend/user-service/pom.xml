@@ -23,6 +23,8 @@
         <java.version>21</java.version>
         <spring-cloud.version>2023.0.3</spring-cloud.version>
         <springdoc.version>2.6.0</springdoc.version>
+        <!-- Override Spring Boot's managed Flyway 10.10.0 — PostgreSQL 18.x support requires 10.15+ -->
+        <flyway.version>10.20.1</flyway.version>
     </properties>
 
     <!-- Spring Cloud BOM — required for Eureka client version alignment -->
@@ -108,6 +110,17 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <!-- Flyway Migration -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <!-- Fix #2: was flyway-mysql; correct artifact for PostgreSQL in Flyway 10+ -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
     </dependencies>

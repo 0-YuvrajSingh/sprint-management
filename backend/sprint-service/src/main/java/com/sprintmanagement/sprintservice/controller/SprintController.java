@@ -60,7 +60,7 @@ public class SprintController {
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PatchMapping("/{id}")
     public SprintResponse updateSprint(@PathVariable UUID id,
-            @RequestBody SprintRequest request) {
+            @Valid @RequestBody SprintRequest request) {
         return sprintService.updateSprint(id, request);
     }
 

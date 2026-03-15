@@ -1,15 +1,27 @@
 package com.sprintmanagement.sprintservice.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(
         name = "sprints",
         indexes = {
-                @Index(name = "idx_sprint_project", columnList = "projectId"),
-                @Index(name = "idx_sprint_status", columnList = "status")
+            @Index(name = "idx_sprint_project", columnList = "projectId"),
+            @Index(name = "idx_sprint_status", columnList = "status")
         }
 )
 public class Sprint {
@@ -38,6 +50,12 @@ public class Sprint {
 
     @Column(nullable = false)
     private UUID projectId;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
 
     public UUID getId() {
         return id;
@@ -95,8 +113,20 @@ public class Sprint {
         this.projectId = projectId;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
     @PrePersist
     private void prePersist() {
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+
         if (this.status == null) {
             this.status = SprintStatus.PLANNED;
         }
@@ -107,6 +137,8 @@ public class Sprint {
 
     @PreUpdate
     private void validateDates() {
+        this.updatedAt = LocalDateTime.now();
+
         if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
             throw new IllegalArgumentException("End date cannot be before start date");
         }

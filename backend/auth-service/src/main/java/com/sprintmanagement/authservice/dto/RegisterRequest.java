@@ -8,6 +8,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+// Role is assigned server-side only.
+// Client cannot control role during registration.
+
 @Data
 public class RegisterRequest {
 
@@ -22,7 +25,4 @@ public class RegisterRequest {
     @NotBlank(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
-
-    @NotNull(message = "Role is required")
-    private Role role;
 }

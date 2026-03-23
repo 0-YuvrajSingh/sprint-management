@@ -53,10 +53,10 @@ springdoc:
 # ─── SECRETS (move to env vars in production) ────────────────────────────────
 # Fix #1: add JWT_SECRET placeholder
 jwt:
-  secret: ${JWT_SECRET:your-jwt-secret-change-in-production}
+  secret: ${JWT_SECRET}
 
 gateway:
-  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
+  secret: ${GATEWAY_SECRET}
 
 # ─── LOGGING ─────────────────────────────────────────────────────────────────
 logging:

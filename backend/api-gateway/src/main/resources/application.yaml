@@ -5,6 +5,11 @@ spring:
   application:
     name: api-gateway
 
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
+    timeout: 2s
+
   # Disable Spring Boot's default UserDetails auto-configuration — we use JWT auth.
   security:
     user:
@@ -20,6 +25,12 @@ spring:
           predicates:
             - Path=/auth/login
           filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
             - RewritePath=/auth/login, /api/v1/auth/login
 
         - id: auth-service-register
@@ -27,6 +38,12 @@ spring:
           predicates:
             - Path=/auth/register
           filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
             - RewritePath=/auth/register, /api/v1/auth/register
 
         # ─── AUTH SERVICE (protected — any other /auth/** route) ─────────────
@@ -35,6 +52,12 @@ spring:
           predicates:
             - Path=/auth/**
           filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 30
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
             - RewritePath=/auth/(?<segment>.*), /api/v1/auth/${segment}
 
         # ─── PROJECT SERVICE ─────────────────────────────────────────────────
@@ -43,6 +66,12 @@ spring:
           predicates:
             - Path=/api/projects/**
           filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 30
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
             - RewritePath=/api/projects/(?<segment>.*), /api/v1/projects/${segment}
 
         # ─── SPRINT SERVICE ──────────────────────────────────────────────────
@@ -51,6 +80,12 @@ spring:
           predicates:
             - Path=/api/sprints/**
           filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 30
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
             - RewritePath=/api/sprints/(?<segment>.*), /api/v1/sprints/${segment}
 
         # ─── STORIES SERVICE ─────────────────────────────────────────────────
@@ -59,6 +94,12 @@ spring:
           predicates:
             - Path=/api/stories/**
           filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 30
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
             - RewritePath=/api/stories/(?<segment>.*), /api/v1/stories/${segment}
 
         # ─── USER SERVICE ────────────────────────────────────────────────────
@@ -66,12 +107,26 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/api/users/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 30
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
 
         # ─── ACTIVITY SERVICE ────────────────────────────────────────────────────
         - id: activity-service
           uri: lb://activity-service
           predicates:
             - Path=/api/activities/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 30
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
 
 # ─── EUREKA ──────────────────────────────────────────────────────────────────
 eureka:
@@ -83,10 +138,10 @@ eureka:
 
 # ─── SECRETS (move to env vars in production) ────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET:your-256-bit-secret-change-in-production}
+  secret: ${JWT_SECRET}
 
 gateway:
-  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
+  secret: ${GATEWAY_SECRET}
 
 # ─── LOGGING ─────────────────────────────────────────────────────────────────
 logging:

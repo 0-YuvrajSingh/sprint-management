@@ -45,6 +45,18 @@
 			<artifactId>spring-cloud-starter-gateway</artifactId>
 		</dependency>
 
+		<!-- Redis for distributed rate limiting -->
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-redis</artifactId>
+		</dependency>
+
+		<!-- Lettuce async Redis client -->
+		<dependency>
+			<groupId>io.lettuce</groupId>
+			<artifactId>lettuce-core</artifactId>
+		</dependency>
+
 		<!-- Eureka Client (REQUIRED for lb:// routing) -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>

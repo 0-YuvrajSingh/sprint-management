@@ -41,12 +41,11 @@ springdoc:
     try-it-out-enabled: true
 
 jwt:
-  # Local default prevents startup failure when JWT_SECRET is unset; override in real environments.
-  secret: ${JWT_SECRET:dev-only-jwt-secret-change-me-32-plus-chars-long}
+  secret: ${JWT_SECRET}
   expiration: 86400000
 
 gateway:
-  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
+  secret: ${GATEWAY_SECRET}
 
 logging:
   level:

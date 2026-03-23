@@ -53,7 +53,7 @@ eureka:
     prefer-ip-address: true
 
 gateway:
-  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
+  secret: ${GATEWAY_SECRET}
 
 jwt:
-  secret: ${JWT_SECRET:your-jwt-secret-change-in-production}
+  secret: ${JWT_SECRET}

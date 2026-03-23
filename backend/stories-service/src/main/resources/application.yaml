@@ -12,8 +12,8 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/storiesdb
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   flyway:
@@ -37,9 +37,11 @@ eureka:
   instance:
     prefer-ip-address: true
 
-# ─── SECRETS (move to env vars in production) ────────────────────────────────
+# ─── SECRETS (move to env vars in production) ────────────────────────────────\
+jwt:
+  secret: ${JWT_SECRET}
 gateway:
-  secret: ${JWT_SECRET:your-gateway-secret-change-in-production}
+  secret: ${GATEWAY_SECRET}
 
 # ─── LOGGING ─────────────────────────────────────────────────────────────────
 logging:

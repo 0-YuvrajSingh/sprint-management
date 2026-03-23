@@ -37,9 +37,11 @@ eureka:
   instance:
     prefer-ip-address: true
 
-# ─── SECRETS (move to env vars in production) ────────────────────────────────
+# ─── SECRETS (move to env vars in production) ────────────────────────────────\
+jwt:
+  secret: ${JWT_SECRET:your-user-jwt-secret-change-in-production}
 gateway:
-  secret: ${JWT_SECRET:your-gateway-secret-change-in-production}
+  secret: ${GATEWAY_SECRET:your-gateway-secret-change-in-production}
 
 # ─── LOGGING ─────────────────────────────────────────────────────────────────
 logging:

@@ -6,12 +6,20 @@ export interface PageResponse<T> {
   number: number;
 }
 
+export interface ApiFieldErrorResponse {
+  field: string;
+  message: string;
+}
+
 export interface ApiErrorResponse {
+  timestamp?: string;
   status?: number;
   error?: string;
   message?: string;
   path?: string;
-  timestamp?: string;
+  code?: string;
+  fieldErrors?: ApiFieldErrorResponse[];
+  traceId?: string;
 }
 
 export interface Project {

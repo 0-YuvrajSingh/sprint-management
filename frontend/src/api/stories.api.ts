@@ -1,13 +1,14 @@
-import client from "./client";
 import type {
-  Story,
-  CreateStoryRequest,
-  UpdateStoryRequest,
-  StoryStatus,
-  StoryAssignment,
-  AssignStoryRequest,
-  UpdateProgressRequest,
+    AssignStoryRequest,
+    CreateStoryRequest,
+    PageResponse,
+    Story,
+    StoryAssignment,
+    StoryStatus,
+    UpdateProgressRequest,
+    UpdateStoryRequest,
 } from "../types";
+import client from "./client";
 
 // ================================================================
 // STORIES API
@@ -28,15 +29,15 @@ const storiesApi = {
 
   // GET /api/stories?sprintId=X&projectId=Y&status=Z
   // Most common usage: list({ sprintId: "abc-123" }) to get stories for a sprint
-  // Returns: flat array (no pagination on stories)
-  list: async (filters?: StoryFilters): Promise<Story[]> => {
+  // Returns: paginated Spring Page object
+  list: async (filters?: StoryFilters): Promise<PageResponse<Story>> => {
     const params = new URLSearchParams();
     if (filters?.sprintId)   params.set("sprintId",   filters.sprintId);
     if (filters?.projectId)  params.set("projectId",  filters.projectId);
     if (filters?.status)     params.set("status",     filters.status);
 
     const query = params.toString() ? `?${params.toString()}` : "";
-    const res = await client.get<Story[]>(`/api/stories${query}`);
+    const res = await client.get<PageResponse<Story>>(`/api/stories${query}`);
     return res.data;
   },
 

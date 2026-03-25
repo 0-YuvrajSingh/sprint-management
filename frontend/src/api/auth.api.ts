@@ -1,5 +1,5 @@
+import type { AuthResponse, LoginRequest, RegisterRequest } from "../types";
 import client from "./client";
-import type { LoginRequest, RegisterRequest, AuthResponse } from "../types";
 
 // ================================================================
 // AUTH API
@@ -11,7 +11,7 @@ const authApi = {
 
   // POST /auth/login
   // Body: { email, password }
-  // Returns: { token, email, role }
+  // Returns: { token }
   // On success → save token via tokenStorage.save() in AuthContext
   login: async (body: LoginRequest): Promise<AuthResponse> => {
     const res = await client.post<AuthResponse>("/auth/login", body);
@@ -19,12 +19,11 @@ const authApi = {
   },
 
   // POST /auth/register
-  // Body: { email, password, role }
-  // Returns: { token, email, role }
+  // Body: { name, email, password }
+  // Returns: 201 Created with empty body
   // Registers user in auth-service AND syncs profile to user-service
-  register: async (body: RegisterRequest): Promise<AuthResponse> => {
-    const res = await client.post<AuthResponse>("/auth/register", body);
-    return res.data;
+  register: async (body: RegisterRequest): Promise<void> => {
+    await client.post("/auth/register", body);
   },
 
 };

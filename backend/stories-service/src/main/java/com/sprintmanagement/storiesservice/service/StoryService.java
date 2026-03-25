@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,15 +12,18 @@ import com.sprintmanagement.storiesservice.dto.StoryResponse;
 import com.sprintmanagement.storiesservice.entity.Story;
 import com.sprintmanagement.storiesservice.entity.StoryStatus;
 import com.sprintmanagement.storiesservice.exception.ResourceNotFoundException;
+import com.sprintmanagement.storiesservice.integration.ActivityAuditClient;
 import com.sprintmanagement.storiesservice.repository.StoryRepository;
 
 @Service
 public class StoryService {
 
     private final StoryRepository storyRepository;
+    private final ActivityAuditClient activityAuditClient;
 
-    public StoryService(StoryRepository storyRepository) {
+    public StoryService(StoryRepository storyRepository, ActivityAuditClient activityAuditClient) {
         this.storyRepository = storyRepository;
+        this.activityAuditClient = activityAuditClient;
     }
 
     @Transactional(readOnly = true)
@@ -71,7 +73,10 @@ public class StoryService {
         story.setSprintId(request.getSprintId());
         story.setAssigneeEmail(request.getAssigneeEmail());
 
-        return StoryResponse.fromEntity(storyRepository.save(story));
+        Story saved = storyRepository.save(story);
+        activityAuditClient.log("CREATED", "STORY", saved.getId().toString(), "Story created");
+
+        return StoryResponse.fromEntity(saved);
     }
 
     @Transactional
@@ -102,7 +107,10 @@ public class StoryService {
             story.setAssigneeEmail(request.getAssigneeEmail());
         }
 
-        return StoryResponse.fromEntity(storyRepository.save(story));
+        Story saved = storyRepository.save(story);
+        activityAuditClient.log("UPDATED", "STORY", saved.getId().toString(), "Story updated");
+
+        return StoryResponse.fromEntity(saved);
     }
 
     @Transactional
@@ -112,5 +120,6 @@ public class StoryService {
                 .orElseThrow(()
                         -> new ResourceNotFoundException("Story not found with id: " + id));
         storyRepository.delete(story);
+        activityAuditClient.log("DELETED", "STORY", id.toString(), "Story deleted");
     }
 }

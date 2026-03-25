@@ -38,10 +38,20 @@ eureka:
     prefer-ip-address: true
 
 # ─── SECRETS (move to env vars in production) ────────────────────────────────\
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+  default-produces-media-type: application/json
+
 jwt:
   secret: ${JWT_SECRET}
 gateway:
   secret: ${GATEWAY_SECRET}
+
+audit:
+  activity-service-url: ${ACTIVITY_SERVICE_URL:http://activity-service}
 
 # ─── LOGGING ─────────────────────────────────────────────────────────────────
 logging:

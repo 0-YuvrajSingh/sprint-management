@@ -1,25 +1,29 @@
 package com.sprintmanagement.sprintservice.service;
 
-import com.sprintmanagement.sprintservice.dto.SprintRequest;
-import com.sprintmanagement.sprintservice.dto.SprintResponse;
-import com.sprintmanagement.sprintservice.entity.Sprint;
-import com.sprintmanagement.sprintservice.entity.SprintStatus;
-import com.sprintmanagement.sprintservice.exception.ResourceNotFoundException;
-import com.sprintmanagement.sprintservice.repository.SprintRepository;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import com.sprintmanagement.sprintservice.dto.SprintRequest;
+import com.sprintmanagement.sprintservice.dto.SprintResponse;
+import com.sprintmanagement.sprintservice.entity.Sprint;
+import com.sprintmanagement.sprintservice.entity.SprintStatus;
+import com.sprintmanagement.sprintservice.exception.ResourceNotFoundException;
+import com.sprintmanagement.sprintservice.integration.ActivityAuditClient;
+import com.sprintmanagement.sprintservice.repository.SprintRepository;
 
 @Service
 public class SprintService {
 
     private final SprintRepository sprintRepository;
+    private final ActivityAuditClient activityAuditClient;
 
-    public SprintService(SprintRepository sprintRepository) {
+    public SprintService(SprintRepository sprintRepository, ActivityAuditClient activityAuditClient) {
         this.sprintRepository = sprintRepository;
+        this.activityAuditClient = activityAuditClient;
     }
 
     private SprintResponse map(Sprint sprint) {
@@ -35,8 +39,8 @@ public class SprintService {
     }
 
     public Page<SprintResponse> getSprints(UUID projectId,
-                                           SprintStatus status,
-                                           Pageable pageable) {
+            SprintStatus status,
+            Pageable pageable) {
 
         Page<Sprint> page;
 
@@ -56,8 +60,8 @@ public class SprintService {
     public SprintResponse getSprintById(UUID id) {
         return sprintRepository.findById(id)
                 .map(this::map)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Sprint not found with id: " + id));
+                .orElseThrow(()
+                        -> new ResourceNotFoundException("Sprint not found with id: " + id));
     }
 
     @Transactional
@@ -70,35 +74,47 @@ public class SprintService {
         sprint.setStatus(request.getStatus());
         sprint.setVelocity(request.getVelocity());
 
-        return map(sprintRepository.save(sprint));
+        Sprint saved = sprintRepository.save(sprint);
+        activityAuditClient.log("CREATED", "SPRINT", saved.getId().toString(), "Sprint created");
+
+        return map(saved);
     }
 
     @Transactional
     public SprintResponse updateSprint(UUID id, SprintRequest request) {
 
         Sprint sprint = sprintRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Sprint not found with id: " + id));
+                .orElseThrow(()
+                        -> new ResourceNotFoundException("Sprint not found with id: " + id));
 
-        if (request.getName() != null)
+        if (request.getName() != null) {
             sprint.setName(request.getName());
+        }
 
-        if (request.getProjectId() != null)
+        if (request.getProjectId() != null) {
             sprint.setProjectId(request.getProjectId());
+        }
 
-        if (request.getStartDate() != null)
+        if (request.getStartDate() != null) {
             sprint.setStartDate(request.getStartDate().atStartOfDay());
+        }
 
-        if (request.getEndDate() != null)
+        if (request.getEndDate() != null) {
             sprint.setEndDate(request.getEndDate().atTime(23, 59, 59));
+        }
 
-        if (request.getStatus() != null)
+        if (request.getStatus() != null) {
             sprint.setStatus(request.getStatus());
+        }
 
-        if (request.getVelocity() != null)
+        if (request.getVelocity() != null) {
             sprint.setVelocity(request.getVelocity());
+        }
 
-        return map(sprintRepository.save(sprint));
+        Sprint saved = sprintRepository.save(sprint);
+        activityAuditClient.log("UPDATED", "SPRINT", saved.getId().toString(), "Sprint updated");
+
+        return map(saved);
     }
 
     @Transactional
@@ -107,5 +123,6 @@ public class SprintService {
             throw new ResourceNotFoundException("Sprint not found with id: " + id);
         }
         sprintRepository.deleteById(id);
+        activityAuditClient.log("DELETED", "SPRINT", id.toString(), "Sprint deleted");
     }
 }

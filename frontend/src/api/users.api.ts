@@ -1,10 +1,11 @@
-import client from "./client";
 import type {
-  User,
-  CreateUserRequest,
-  UpdateUserRequest,
-  UpdateUserRoleRequest,
+    CreateUserRequest,
+    PageResponse,
+    UpdateUserRequest,
+    UpdateUserRoleRequest,
+    User,
 } from "../types";
+import client from "./client";
 
 // ================================================================
 // USERS API
@@ -15,10 +16,10 @@ import type {
 const usersApi = {
 
   // GET /api/users
-  // Returns all users — available to all authenticated roles
+  // Returns paginated users — available to all authenticated roles
   // Used to populate user dropdowns in assignment forms
-  list: async (): Promise<User[]> => {
-    const res = await client.get<User[]>("/api/users");
+  list: async (): Promise<PageResponse<User>> => {
+    const res = await client.get<PageResponse<User>>("/api/users");
     return res.data;
   },
 

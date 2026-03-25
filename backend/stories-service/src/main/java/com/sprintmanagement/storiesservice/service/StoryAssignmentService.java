@@ -12,6 +12,7 @@ import com.sprintmanagement.storiesservice.dto.StoryAssignmentRequest;
 import com.sprintmanagement.storiesservice.dto.StoryAssignmentResponse;
 import com.sprintmanagement.storiesservice.entity.StoryAssignment;
 import com.sprintmanagement.storiesservice.exception.ResourceNotFoundException;
+import com.sprintmanagement.storiesservice.integration.ActivityAuditClient;
 import com.sprintmanagement.storiesservice.repository.StoryAssignmentRepository;
 import com.sprintmanagement.storiesservice.repository.StoryRepository;
 
@@ -20,11 +21,14 @@ public class StoryAssignmentService {
 
     private final StoryAssignmentRepository assignmentRepository;
     private final StoryRepository storyRepository;
+    private final ActivityAuditClient activityAuditClient;
 
     public StoryAssignmentService(StoryAssignmentRepository assignmentRepository,
-            StoryRepository storyRepository) {
+            StoryRepository storyRepository,
+            ActivityAuditClient activityAuditClient) {
         this.assignmentRepository = assignmentRepository;
         this.storyRepository = storyRepository;
+        this.activityAuditClient = activityAuditClient;
     }
 
     @Transactional(readOnly = true)
@@ -50,7 +54,10 @@ public class StoryAssignmentService {
         assignment.setSkill(request.getSkill());
         assignment.setPointsAssigned(request.getPointsAssigned());
 
-        return StoryAssignmentResponse.fromEntity(assignmentRepository.save(assignment));
+        StoryAssignment saved = assignmentRepository.save(assignment);
+        activityAuditClient.log("ASSIGNED", "ASSIGNMENT", saved.getId().toString(), "Story assignment created");
+
+        return StoryAssignmentResponse.fromEntity(saved);
     }
 
     @Transactional
@@ -64,7 +71,9 @@ public class StoryAssignmentService {
                 + " on story " + storyId));
 
         assignment.setPointsCompleted(request.getPointsCompleted());
-        return StoryAssignmentResponse.fromEntity(assignmentRepository.save(assignment));
+        StoryAssignment saved = assignmentRepository.save(assignment);
+        activityAuditClient.log("UPDATED", "ASSIGNMENT", saved.getId().toString(), "Story assignment progress updated");
+        return StoryAssignmentResponse.fromEntity(saved);
     }
 
     private void verifyStoryExists(UUID storyId) {

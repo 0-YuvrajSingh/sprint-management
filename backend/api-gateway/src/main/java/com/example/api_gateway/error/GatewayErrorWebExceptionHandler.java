@@ -2,7 +2,6 @@ package com.example.api_gateway.error;
 
 import java.util.List;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -15,12 +14,13 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sprintmanagement.common.error.ErrorCode;
 import com.sprintmanagement.common.error.ErrorResponse;
 import com.sprintmanagement.common.error.ErrorResponseBuilder;
-import com.sprintmanagement.common.error.FieldErrorDto;
 import com.sprintmanagement.common.error.ErrorUtils;
+import com.sprintmanagement.common.error.FieldErrorDto;
 
 import reactor.core.publisher.Mono;
 
@@ -62,10 +62,20 @@ public class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler
 
     private HttpStatus resolveStatus(Throwable ex) {
         if (ex instanceof WebClientResponseException webClientResponseException) {
-            return HttpStatus.valueOf(webClientResponseException.getStatusCode().value());
+            try {
+                return HttpStatus.valueOf(webClientResponseException.getStatusCode().value());
+            } catch (IllegalArgumentException e) {
+                // Non-standard downstream status code; fallback to 502 Bad Gateway
+                return HttpStatus.BAD_GATEWAY;
+            }
         }
         if (ex instanceof ResponseStatusException responseStatusException) {
-            return HttpStatus.valueOf(responseStatusException.getStatusCode().value());
+            try {
+                return HttpStatus.valueOf(responseStatusException.getStatusCode().value());
+            } catch (IllegalArgumentException e) {
+                // Non-standard status code; fallback to 500 Internal Server Error
+                return HttpStatus.INTERNAL_SERVER_ERROR;
+            }
         }
         if (ex instanceof AuthenticationException) {
             return HttpStatus.UNAUTHORIZED;
@@ -143,14 +153,22 @@ public class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler
 
     private ErrorCode mapGatewayStatusCode(HttpStatus status) {
         return switch (status) {
-            case BAD_REQUEST -> ErrorCode.BAD_REQUEST;
-            case UNAUTHORIZED -> ErrorCode.UNAUTHORIZED;
-            case FORBIDDEN -> ErrorCode.FORBIDDEN;
-            case NOT_FOUND -> ErrorCode.NOT_FOUND;
-            case CONFLICT -> ErrorCode.CONFLICT;
-            case SERVICE_UNAVAILABLE -> ErrorCode.SERVICE_UNAVAILABLE;
-            case GATEWAY_TIMEOUT -> ErrorCode.SERVICE_TIMEOUT;
-            default -> ErrorCode.GATEWAY_UNEXPECTED;
+            case BAD_REQUEST ->
+                ErrorCode.BAD_REQUEST;
+            case UNAUTHORIZED ->
+                ErrorCode.UNAUTHORIZED;
+            case FORBIDDEN ->
+                ErrorCode.FORBIDDEN;
+            case NOT_FOUND ->
+                ErrorCode.NOT_FOUND;
+            case CONFLICT ->
+                ErrorCode.CONFLICT;
+            case SERVICE_UNAVAILABLE ->
+                ErrorCode.SERVICE_UNAVAILABLE;
+            case GATEWAY_TIMEOUT ->
+                ErrorCode.SERVICE_TIMEOUT;
+            default ->
+                ErrorCode.GATEWAY_UNEXPECTED;
         };
     }
 
@@ -180,6 +198,7 @@ public class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler
             String message,
             String path,
             List<FieldErrorDto> fieldErrors
-    ) {
+            ) {
+
     }
 }

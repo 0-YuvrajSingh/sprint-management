@@ -105,6 +105,12 @@
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.sprintmanagement</groupId>
+            <artifactId>common-error</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
         <!-- Flyway Migration -->
         <dependency>
             <groupId>org.flywaydb</groupId>

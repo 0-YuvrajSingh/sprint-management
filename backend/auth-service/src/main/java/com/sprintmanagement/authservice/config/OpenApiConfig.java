@@ -1,4 +1,4 @@
-package com.sprintmanagement.userservice.config;
+package com.sprintmanagement.authservice.config;
 
 import java.util.List;
 
@@ -31,12 +31,12 @@ public class OpenApiConfig {
     private static final String INTERNAL_SERVER_ERROR = "InternalServerError";
 
     @Bean
-    public OpenAPI userServiceOpenAPI() {
+    public OpenAPI authServiceOpenAPI() {
         return new OpenAPI()
                 .components(openApiComponents())
                 .info(new Info()
-                        .title("User Service API")
-                        .description("User management endpoints for creating, updating, and administering users")
+                        .title("Auth Service API")
+                        .description("Authentication endpoints for registration, login, and token-oriented access flows")
                         .version("1.0.0"));
     }
 

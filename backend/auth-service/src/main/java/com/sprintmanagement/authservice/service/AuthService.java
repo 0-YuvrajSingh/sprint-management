@@ -1,3 +1,29 @@
+package com.sprintmanagement.authservice.service;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+
+import com.sprintmanagement.authservice.dto.AuthResponse;
+import com.sprintmanagement.authservice.dto.LoginRequest;
+import com.sprintmanagement.authservice.dto.RegisterRequest;
+import com.sprintmanagement.authservice.dto.UserProfileRequest;
+import com.sprintmanagement.authservice.entity.Role;
+import com.sprintmanagement.authservice.entity.User;
+import com.sprintmanagement.authservice.exception.EmailAlreadyExistsException;
+import com.sprintmanagement.authservice.exception.InvalidCredentialsException;
+import com.sprintmanagement.authservice.exception.ProfileSyncException;
+import com.sprintmanagement.authservice.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -55,7 +81,7 @@ public class AuthService {
     private Role getDefaultRole() {
         return Role.VIEWER;
     }
-    
+
     /*
      * Internal service-to-service call.
      * Authenticated using gateway secret.
@@ -89,8 +115,11 @@ public class AuthService {
 
             log.warn(
                     "Failed to sync user profile for email={}",
-                    req.getEmail()
+                    req.getEmail(),
+                    ex
             );
+
+            throw new ProfileSyncException(req.getEmail(), ex);
         }
     }
 }

@@ -1,13 +1,13 @@
 import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useEffect,
-  type ReactNode,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
+    type ReactNode,
 } from "react";
 import { tokenStorage } from "../api/client";
-import type { AuthUser, AuthResponse, UserRole } from "../types";
+import type { AuthResponse, AuthUser, UserRole } from "../types";
 
 // ================================================================
 // CONTEXT SHAPE
@@ -88,9 +88,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Saves token to localStorage so client.ts interceptor picks it up
   const login = useCallback((auth: AuthResponse) => {
     tokenStorage.save(auth.token);
+    const decoded = tokenStorage.decode();
+    if (!decoded) {
+      tokenStorage.clear();
+      setUser(null);
+      throw new Error("Received invalid authentication token.");
+    }
+
     setUser({
-      email: auth.email,
-      role:  auth.role,
+      email: decoded.sub,
+      role:  decoded.role as UserRole,
     });
   }, []);
 

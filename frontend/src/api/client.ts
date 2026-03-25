@@ -1,5 +1,5 @@
-import axios from "axios";
 import type { AxiosError, InternalAxiosRequestConfig } from "axios";
+import axios from "axios";
 import type { ApiError } from "../types";
 
 // ================================================================
@@ -47,16 +47,35 @@ client.interceptors.request.use(
 // ================================================================
 // RESPONSE INTERCEPTOR
 // Runs after EVERY response automatically.
-// Handles 401 (expired token) and normalises error shape.
+// Handles auth redirects and normalizes canonical backend errors.
 // ================================================================
 
-client.interceptors.response.use(
-  // Success — just return the response as-is
-  (response) => response,
+const toUiErrorMessage = (apiError: ApiError | undefined, status: number): string => {
+  if (!apiError) {
+    return `Request failed with status ${status}`;
+  }
 
-  // Error — normalise into a consistent shape
+  const fieldMessage = apiError.fieldErrors?.[0]?.message;
+  const baseMessage = apiError.message || fieldMessage || apiError.error || `Request failed with status ${status}`;
+
+  if (apiError.code && apiError.traceId) {
+    return `${baseMessage} (code: ${apiError.code}, trace: ${apiError.traceId})`;
+  }
+
+  if (apiError.code) {
+    return `${baseMessage} (code: ${apiError.code})`;
+  }
+
+  if (apiError.traceId) {
+    return `${baseMessage} (trace: ${apiError.traceId})`;
+  }
+
+  return baseMessage;
+};
+
+client.interceptors.response.use(
+  (response) => response,
   (error: AxiosError<ApiError>) => {
-    // Token expired or invalid — clear storage and redirect to login
     if (error.response?.status === 401) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem("sms_user");
@@ -64,23 +83,13 @@ client.interceptors.response.use(
       return Promise.reject(new Error("Session expired. Please log in again."));
     }
 
-    // 403 — user is authenticated but lacks the required role
-    if (error.response?.status === 403) {
-      return Promise.reject(new Error("You don't have permission to do that."));
-    }
-
-    // Backend returned a structured error (GlobalExceptionHandler shape)
-    if (error.response?.data?.message) {
-      return Promise.reject(new Error(error.response.data.message));
-    }
-
-    // Network error — gateway unreachable
     if (!error.response) {
       return Promise.reject(new Error("Cannot reach the server. Is the gateway running?"));
     }
 
-    // Fallback
-    return Promise.reject(new Error(`Request failed with status ${error.response.status}`));
+    return Promise.reject(
+      new Error(toUiErrorMessage(error.response.data, error.response.status))
+    );
   }
 );
 

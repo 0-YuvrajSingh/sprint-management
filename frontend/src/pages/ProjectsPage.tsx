@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import projectsApi from "../api/projects.api";
 import { useAuth } from "../context/AuthContext";
@@ -32,10 +32,11 @@ export default function ProjectsPage() {
   // ── Fetch all projects ──────────────────────────────────────
   // queryKey: ["projects"] — used to invalidate this query after mutations
   // TanStack Query caches this result for staleTime (5 min from main.tsx)
-  const { data: projects = [], isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["projects"],
     queryFn: projectsApi.list,
   });
+  const projects = data?.content ?? [];
 
   // ── Create project ──────────────────────────────────────────
   const createMutation = useMutation({

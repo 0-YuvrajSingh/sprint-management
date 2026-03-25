@@ -37,16 +37,14 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
+  name: string;
   email: string;
   password: string;
-  role: UserRole;
 }
 
 // What auth-service returns on login/register
 export interface AuthResponse {
   token: string;   // JWT — store this in localStorage
-  email: string;
-  role: UserRole;
 }
 
 // What we decode from the JWT and store in AuthContext
@@ -229,9 +227,19 @@ export interface PageResponse<T> {
   number: number; // current page (0-indexed)
 }
 
-// Standard error shape from GlobalExceptionHandler
-export interface ApiError {
-  status: number;
+// Canonical backend error envelope
+export interface ApiFieldError {
+  field: string;
   message: string;
-  timestamp: string;
+}
+
+export interface ApiError {
+  timestamp?: string;
+  status?: number;
+  error?: string;
+  message?: string;
+  path?: string;
+  code?: string;
+  fieldErrors?: ApiFieldError[];
+  traceId?: string;
 }

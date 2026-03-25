@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
 
-import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,18 +33,14 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
         String incomingSecret = request.getHeader("X-Gateway-Secret");
 
         if (!isValidGatewaySecret(incomingSecret)) {
-            sendError(response, HttpServletResponse.SC_UNAUTHORIZED,
-                    "Request did not originate from gateway");
-            return;
+            throw new BadCredentialsException("Request did not originate from gateway");
         }
 
         String email = request.getHeader("X-User-Email");
         String role  = request.getHeader("X-User-Role");
 
         if (email == null || role == null) {
-            sendError(response, HttpServletResponse.SC_UNAUTHORIZED,
-                    "Missing identity headers");
-            return;
+            throw new BadCredentialsException("Missing identity headers");
         }
 
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -68,12 +64,5 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
                 incoming.getBytes(StandardCharsets.UTF_8),
                 gatewaySecret.getBytes(StandardCharsets.UTF_8)
         );
-    }
-
-    private void sendError(HttpServletResponse response, int status, String message)
-            throws IOException {
-        response.setStatus(status);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write("{\"error\": \"" + message + "\"}");
     }
 }

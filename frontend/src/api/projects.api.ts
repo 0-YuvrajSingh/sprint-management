@@ -1,9 +1,10 @@
-import client from "./client";
 import type {
-  Project,
-  CreateProjectRequest,
-  UpdateProjectRequest,
+    CreateProjectRequest,
+    PageResponse,
+    Project,
+    UpdateProjectRequest,
 } from "../types";
+import client from "./client";
 
 // ================================================================
 // PROJECTS API
@@ -14,9 +15,9 @@ import type {
 const projectsApi = {
 
   // GET /api/projects
-  // Returns all projects — available to all authenticated roles
-  list: async (): Promise<Project[]> => {
-    const res = await client.get<Project[]>("/api/projects");
+  // Returns paginated projects — available to all authenticated roles
+  list: async (): Promise<PageResponse<Project>> => {
+    const res = await client.get<PageResponse<Project>>("/api/projects");
     return res.data;
   },
 

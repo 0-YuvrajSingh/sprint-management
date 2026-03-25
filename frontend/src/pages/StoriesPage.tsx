@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import storiesApi from "../api/stories.api";
 import { useAuth } from "../context/AuthContext";
-import type { Story, StoryStatus, StoryPriority } from "../types";
+import type { Story, StoryPriority, StoryStatus } from "../types";
 
 // ================================================================
 // SCHEMA
@@ -59,10 +59,11 @@ export default function StoriesPage() {
   const projectId  = searchParams.get("projectId")  ?? undefined;
 
   // ── Fetch stories ───────────────────────────────────────────
-  const { data: stories = [], isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["stories", sprintId, projectId],
     queryFn: () => storiesApi.list({ sprintId, projectId }),
   });
+  const stories = data?.content ?? [];
 
   // ── Create story ────────────────────────────────────────────
   const createMutation = useMutation({

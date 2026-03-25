@@ -114,6 +114,7 @@ spring:
                 redis-rate-limiter.burstCapacity: 30
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@userKeyResolver}"
+            - RewritePath=/api/users/(?<segment>.*), /api/v1/users/${segment}
 
         # ─── ACTIVITY SERVICE ────────────────────────────────────────────────────
         - id: activity-service
@@ -127,6 +128,7 @@ spring:
                 redis-rate-limiter.burstCapacity: 30
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@userKeyResolver}"
+            - RewritePath=/api/activities/(?<segment>.*), /api/v1/activities/${segment}
 
 # ─── EUREKA ──────────────────────────────────────────────────────────────────
 eureka:

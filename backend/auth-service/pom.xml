@@ -75,6 +75,12 @@
 			<version>2.5.0</version>
 		</dependency>
 
+		<dependency>
+			<groupId>com.sprintmanagement</groupId>
+			<artifactId>common-error</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+
 		<!-- Database -->
 		<dependency>
 			<groupId>org.postgresql</groupId>

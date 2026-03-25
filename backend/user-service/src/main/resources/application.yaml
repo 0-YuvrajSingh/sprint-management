@@ -43,12 +43,13 @@ eureka:
 # ─── OPENAPI ─────────────────────────────────────────────────────────────────
 springdoc:
   api-docs:
-    path: /v3/api-docs
+    enabled: true
   swagger-ui:
-    path: /swagger-ui.html
+    enabled: true
     operations-sorter: method
     tags-sorter: alpha
     try-it-out-enabled: true
+  default-produces-media-type: application/json
 
 # ─── SECRETS (move to env vars in production) ────────────────────────────────
 # Fix #1: add JWT_SECRET placeholder

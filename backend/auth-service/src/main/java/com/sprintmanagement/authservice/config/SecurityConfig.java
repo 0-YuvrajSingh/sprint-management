@@ -14,9 +14,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.sprintmanagement.authservice.security.CustomAccessDeniedHandler;
-import com.sprintmanagement.authservice.security.CustomAuthenticationEntryPoint;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sprintmanagement.authservice.security.JwtAuthenticationFilter;
+import com.sprintmanagement.common.error.security.CanonicalAccessDeniedHandler;
+import com.sprintmanagement.common.error.security.CanonicalAuthenticationEntryPoint;
 
 @Configuration
 @EnableWebSecurity
@@ -24,11 +25,21 @@ import com.sprintmanagement.authservice.security.JwtAuthenticationFilter;
 public class SecurityConfig {
 
     @Bean
+    public CanonicalAuthenticationEntryPoint canonicalAuthenticationEntryPoint(ObjectMapper objectMapper) {
+        return new CanonicalAuthenticationEntryPoint(objectMapper);
+    }
+
+    @Bean
+    public CanonicalAccessDeniedHandler canonicalAccessDeniedHandler(ObjectMapper objectMapper) {
+        return new CanonicalAccessDeniedHandler(objectMapper);
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            CustomAuthenticationEntryPoint authenticationEntryPoint,
-            CustomAccessDeniedHandler accessDeniedHandler) throws Exception {
+            CanonicalAuthenticationEntryPoint authenticationEntryPoint,
+            CanonicalAccessDeniedHandler accessDeniedHandler) throws Exception {
 
         return http
                 .csrf(AbstractHttpConfigurer::disable)

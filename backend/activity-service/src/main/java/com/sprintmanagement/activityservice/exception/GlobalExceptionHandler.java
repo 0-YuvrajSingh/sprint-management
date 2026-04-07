@@ -18,7 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.sprintmanagement.common.error.ErrorCode;
 import com.sprintmanagement.common.error.ErrorResponse;
-import com.sprintmanagement.common.error.ErrorResponseBuilder;
+import com.sprintmanagement.common.error.ServletErrorResponseBuilder;
 import com.sprintmanagement.common.error.FieldErrorDto;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponseBuilder.validation(
+                .body(ServletErrorResponseBuilder.validation(
                         "Validation failed",
                         ex.getBindingResult().getFieldErrors().stream()
                                 .map(this::toFieldError)
@@ -49,21 +49,21 @@ public class GlobalExceptionHandler {
                 violation.getMessage()))
                 .toList();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponseBuilder.validation("Constraint violation", fieldErrors, request));
+                .body(ServletErrorResponseBuilder.validation("Constraint violation", fieldErrors, request));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(
             AccessDeniedException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ErrorResponseBuilder.forbidden("Access denied", request));
+                .body(ServletErrorResponseBuilder.forbidden("Access denied", request));
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthentication(
             AuthenticationException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponseBuilder.unauthorized("Authentication required", request));
+                .body(ServletErrorResponseBuilder.unauthorized("Authentication required", request));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
@@ -109,7 +109,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalArgument(
             IllegalArgumentException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponseBuilder.badRequest(ex.getMessage(), request));
+                .body(ServletErrorResponseBuilder.badRequest(ex.getMessage(), request));
     }
 
         @ExceptionHandler({NullPointerException.class, IllegalStateException.class})
@@ -141,6 +141,6 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ErrorResponse> build(
             HttpStatus status, ErrorCode code, String message, HttpServletRequest request) {
         return ResponseEntity.status(status)
-                .body(ErrorResponseBuilder.fromCode(status.value(), code, message, request));
+                .body(ServletErrorResponseBuilder.fromCode(status.value(), code, message, request));
     }
 }

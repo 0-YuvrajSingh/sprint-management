@@ -1,4 +1,4 @@
-package com.example.api_gateway.config;
+package com.sprintmanagement.apigateway.config;
 
 import java.net.InetSocketAddress;
 
@@ -43,3 +43,4 @@ public class RateLimitConfig {
         return remoteAddress.getAddress().getHostAddress();
     }
 }
+

@@ -20,7 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.sprintmanagement.common.error.ErrorCode;
 import com.sprintmanagement.common.error.ErrorResponse;
-import com.sprintmanagement.common.error.ErrorResponseBuilder;
+import com.sprintmanagement.common.error.ServletErrorResponseBuilder;
 import com.sprintmanagement.common.error.FieldErrorDto;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponseBuilder.validation(
+                .body(ServletErrorResponseBuilder.validation(
                         "Validation failed",
                         ex.getBindingResult().getFieldErrors().stream()
                                 .map(this::toFieldError)
@@ -63,7 +63,7 @@ public class GlobalExceptionHandler {
                 violation.getMessage()))
                 .toList();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponseBuilder.validation("Constraint violation", fieldErrors, request));
+                .body(ServletErrorResponseBuilder.validation("Constraint violation", fieldErrors, request));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -76,7 +76,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTypeMismatch(
             MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponseBuilder.badRequest(
+                .body(ServletErrorResponseBuilder.badRequest(
                         "Invalid value for parameter '%s'".formatted(ex.getName()), request));
     }
 
@@ -84,7 +84,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMalformedJson(
             HttpMessageNotReadableException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponseBuilder.badRequest("Malformed JSON request", request));
+                .body(ServletErrorResponseBuilder.badRequest("Malformed JSON request", request));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -109,14 +109,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccessDenied(
             AccessDeniedException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ErrorResponseBuilder.forbidden("Access denied", request));
+                .body(ServletErrorResponseBuilder.forbidden("Access denied", request));
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthentication(
             AuthenticationException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponseBuilder.unauthorized("Authentication required", request));
+                .body(ServletErrorResponseBuilder.unauthorized("Authentication required", request));
     }
 
     @ExceptionHandler(SecurityException.class)
@@ -135,7 +135,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOptimisticLocking(
             OptimisticLockingFailureException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ErrorResponseBuilder.fromCode(
+                .body(ServletErrorResponseBuilder.fromCode(
                         HttpStatus.CONFLICT.value(),
                         ErrorCode.CONFLICT,
                         "The resource was modified by another request. Please retry.",
@@ -187,6 +187,6 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ErrorResponse> build(
             HttpStatus status, ErrorCode code, String message, HttpServletRequest request) {
         return ResponseEntity.status(status)
-                .body(ErrorResponseBuilder.fromCode(status.value(), code, message, request));
+                .body(ServletErrorResponseBuilder.fromCode(status.value(), code, message, request));
     }
 }

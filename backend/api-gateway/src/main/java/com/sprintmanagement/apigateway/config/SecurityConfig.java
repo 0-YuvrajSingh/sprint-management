@@ -1,4 +1,4 @@
-package com.example.api_gateway.config;
+package com.sprintmanagement.apigateway.config;
 
 import java.time.Duration;
 import java.util.List;
@@ -17,8 +17,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
-import com.example.api_gateway.security.CanonicalServerAccessDeniedHandler;
-import com.example.api_gateway.security.CanonicalServerAuthenticationEntryPoint;
+import com.sprintmanagement.apigateway.security.CanonicalServerAccessDeniedHandler;
+import com.sprintmanagement.apigateway.security.CanonicalServerAuthenticationEntryPoint;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration
@@ -90,3 +90,4 @@ public class SecurityConfig {
                         -> frameOptionsSpec.mode(XFrameOptionsServerHttpHeadersWriter.Mode.DENY));
     }
 }
+

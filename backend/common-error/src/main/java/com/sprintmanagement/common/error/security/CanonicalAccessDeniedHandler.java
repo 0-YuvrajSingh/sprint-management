@@ -8,7 +8,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sprintmanagement.common.error.ErrorResponse;
-import com.sprintmanagement.common.error.ErrorResponseBuilder;
+import com.sprintmanagement.common.error.ServletErrorResponseBuilder;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,10 +23,11 @@ public class CanonicalAccessDeniedHandler implements AccessDeniedHandler {
     }
 
     @Override
-    public void handle(HttpServletRequest request,
-            HttpServletResponse response,
-            AccessDeniedException accessDeniedException) throws IOException, ServletException {
-        ErrorResponse error = ErrorResponseBuilder.forbidden("Access denied", request);
+    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException)
+            throws IOException, ServletException {
+
+        ErrorResponse error = ServletErrorResponseBuilder.forbidden("Access denied", request);
+
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), error);

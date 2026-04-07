@@ -13,7 +13,7 @@
 
     <groupId>com.sprintmanagement</groupId>
     <artifactId>common-error</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1-STABLE-REPAIR</version>
     <packaging>jar</packaging>
     <name>common-error</name>
     <description>Shared backend utilities and canonical error contract</description>
@@ -26,11 +26,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

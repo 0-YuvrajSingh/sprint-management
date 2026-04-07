@@ -1,4 +1,4 @@
-package com.example.api_gateway.filter;
+package com.sprintmanagement.apigateway.filter;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -468,3 +468,4 @@ public class GatewayIdentityHeadersFilter implements GlobalFilter, Ordered {
         );
     }
 }
+

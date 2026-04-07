@@ -58,3 +58,13 @@ gateway:
 
 audit:
   activity-service-url: ${ACTIVITY_SERVICE_URL:http://activity-service}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+

@@ -169,4 +169,14 @@ gateway:
 logging:
   level:
     org.springframework.cloud.gateway: INFO
-    com.example.api_gateway: DEBUG
+    com.sprintmanagement.apigateway: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+

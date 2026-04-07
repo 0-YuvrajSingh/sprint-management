@@ -1,4 +1,4 @@
-package com.example.api_gateway.security;
+package com.sprintmanagement.apigateway.security;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

@@ -1,6 +1,7 @@
-package com.example.api_gateway.error;
+package com.sprintmanagement.apigateway.error;
 
 import java.util.List;
+import org.springframework.lang.NonNull;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,8 @@ public class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler
     }
 
     @Override
-    public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
+    @NonNull
+    public Mono<Void> handle(@NonNull ServerWebExchange exchange, @NonNull Throwable ex) {
         if (exchange.getResponse().isCommitted()) {
             return Mono.error(ex);
         }
@@ -211,3 +213,4 @@ public class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler
 
     }
 }
+

@@ -8,7 +8,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sprintmanagement.common.error.ErrorResponse;
-import com.sprintmanagement.common.error.ErrorResponseBuilder;
+import com.sprintmanagement.common.error.ServletErrorResponseBuilder;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,10 +23,11 @@ public class CanonicalAuthenticationEntryPoint implements AuthenticationEntryPoi
     }
 
     @Override
-    public void commence(HttpServletRequest request,
-            HttpServletResponse response,
-            AuthenticationException authException) throws IOException, ServletException {
-        ErrorResponse error = ErrorResponseBuilder.unauthorized("Authentication required", request);
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException)
+            throws IOException, ServletException {
+
+        ErrorResponse error = ServletErrorResponseBuilder.unauthorized("Authentication required", request);
+
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), error);

@@ -63,3 +63,13 @@ logging:
   level:
     org.springframework.security: INFO
     com.sprintmanagement.projectservice: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/layouts/Sidebar";
 import { Topbar } from "@/layouts/Topbar";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 
 export function AppLayout() {
   const location = useLocation();

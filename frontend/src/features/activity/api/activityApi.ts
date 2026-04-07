@@ -1,6 +1,6 @@
+import type { ActivityEntry, ActivityFilters } from "@/features/activity/types";
 import { apiClient } from "@/shared/api/client";
 import type { PageableResponse } from "@/shared/types/api";
-import type { ActivityEntry, ActivityFilters } from "@/features/activity/types";
 
 function normalizeActivityResponse(data: PageableResponse<ActivityEntry> | ActivityEntry[]): PageableResponse<ActivityEntry> {
   if (Array.isArray(data)) {
@@ -21,7 +21,7 @@ function normalizeActivityResponse(data: PageableResponse<ActivityEntry> | Activ
 }
 
 export async function listActivities(filters: ActivityFilters) {
-  const response = await apiClient.get<PageableResponse<ActivityEntry> | ActivityEntry[]>("/api/v1/activities", {
+  const response = await apiClient.get<PageableResponse<ActivityEntry> | ActivityEntry[]>("/api/activities", {
     params: {
       page: filters.page ?? 0,
       size: filters.size ?? 12,

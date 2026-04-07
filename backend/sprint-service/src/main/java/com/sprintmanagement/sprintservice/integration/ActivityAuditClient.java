@@ -50,7 +50,7 @@ public class ActivityAuditClient {
                     HttpMethod.POST,
                     new HttpEntity<>(body, headers),
                     Void.class);
-        } catch (RestClientException ex) {
+        } catch (RestClientException | IllegalStateException ex) {
             log.warn("Failed to publish audit event action={} target={} id={}", actionType, targetType, targetId, ex);
         }
     }

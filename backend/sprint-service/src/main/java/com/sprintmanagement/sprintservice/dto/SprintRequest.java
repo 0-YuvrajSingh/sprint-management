@@ -1,30 +1,22 @@
 package com.sprintmanagement.sprintservice.dto;
 
-import com.sprintmanagement.sprintservice.entity.SprintStatus;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-
 import java.time.LocalDate;
 import java.util.UUID;
 
+import com.sprintmanagement.sprintservice.entity.SprintStatus;
+
 public class SprintRequest {
 
-    @NotBlank(message = "Sprint name is required")
     private String name;
 
-    @NotNull(message = "Project ID is required")
     private UUID projectId;
 
-    @NotNull(message = "Start date is required")
     private LocalDate startDate;
 
-    @NotNull(message = "End date is required")
     private LocalDate endDate;
 
-    @NotNull(message = "Status is required")
     private SprintStatus status;
 
-    @NotNull(message = "Velocity is required")
     private Integer velocity;
 
     public SprintRequest() {

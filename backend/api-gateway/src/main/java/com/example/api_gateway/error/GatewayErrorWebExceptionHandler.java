@@ -2,6 +2,8 @@ package com.example.api_gateway.error;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -28,6 +30,8 @@ import reactor.core.publisher.Mono;
 @Order(-2)
 public class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GatewayErrorWebExceptionHandler.class);
+
     private final ObjectMapper objectMapper;
 
     public GatewayErrorWebExceptionHandler(ObjectMapper objectMapper) {
@@ -39,6 +43,11 @@ public class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler
         if (exchange.getResponse().isCommitted()) {
             return Mono.error(ex);
         }
+
+        log.error("Gateway request failed: method={}, path={}",
+                exchange.getRequest().getMethod(),
+                exchange.getRequest().getPath().value(),
+                ex);
 
         HttpStatus status = resolveStatus(ex);
         String path = exchange.getRequest().getPath().value();

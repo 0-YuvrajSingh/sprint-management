@@ -9,6 +9,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -42,11 +43,11 @@ public class AuthService {
     @Transactional
     public void registerUser(RegisterRequest registerRequest) {
 
+        Role role = getDefaultRole();
+
         if (userRepository.existsByEmail(registerRequest.getEmail())) {
             throw new EmailAlreadyExistsException(registerRequest.getEmail());
         }
-
-        Role role = getDefaultRole();
 
         User user = User.builder()
                 .email(registerRequest.getEmail())
@@ -56,7 +57,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        syncUserProfile(registerRequest);
+        syncUserProfile(registerRequest, role);
     }
 
     @Transactional(readOnly = true)
@@ -88,7 +89,7 @@ public class AuthService {
      * ADMIN role is used only for trusted internal communication.
      * Client cannot trigger this directly.
      */
-    private void syncUserProfile(RegisterRequest req) {
+    private void syncUserProfile(RegisterRequest req, Role role) {
 
         try {
 
@@ -101,15 +102,23 @@ public class AuthService {
             UserProfileRequest body = new UserProfileRequest(
                     req.getName(),
                     req.getEmail(),
-                    getDefaultRole()
+                    role
             );
 
             restTemplate.exchange(
-                    "http://user-service/api/users/register",
+                    "http://user-service/api/v1/users/register",
                     HttpMethod.POST,
                     new HttpEntity<>(body, headers),
                     Void.class
             );
+
+        } catch (HttpClientErrorException.Conflict ex) {
+
+            log.info(
+                    "User profile already exists in user-service for email={}, skipping sync",
+                    req.getEmail()
+            );
+            return;
 
         } catch (RestClientException ex) {
 

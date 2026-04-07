@@ -66,8 +66,21 @@ public class SprintService {
 
     @Transactional
     public SprintResponse createSprint(SprintRequest request) {
+        if (request.getName() == null || request.getName().isBlank()) {
+            throw new IllegalArgumentException("Sprint name is required");
+        }
+        if (request.getProjectId() == null) {
+            throw new IllegalArgumentException("Project ID is required");
+        }
+        if (request.getStartDate() == null) {
+            throw new IllegalArgumentException("Start date is required");
+        }
+        if (request.getEndDate() == null) {
+            throw new IllegalArgumentException("End date is required");
+        }
+
         Sprint sprint = new Sprint();
-        sprint.setName(request.getName());
+        sprint.setName(request.getName().trim());
         sprint.setProjectId(request.getProjectId());
         sprint.setStartDate(request.getStartDate().atStartOfDay());
         sprint.setEndDate(request.getEndDate().atTime(23, 59, 59));
@@ -88,7 +101,10 @@ public class SprintService {
                         -> new ResourceNotFoundException("Sprint not found with id: " + id));
 
         if (request.getName() != null) {
-            sprint.setName(request.getName());
+            if (request.getName().isBlank()) {
+                throw new IllegalArgumentException("Sprint name cannot be blank");
+            }
+            sprint.setName(request.getName().trim());
         }
 
         if (request.getProjectId() != null) {

@@ -16,16 +16,23 @@ public class RateLimitConfig {
 
     @Bean
     public KeyResolver userKeyResolver() {
-        // Use authenticated principal first for stable per-user rate limiting; fallback to IP for anonymous traffic.
-        return exchange -> ReactiveSecurityContextHolder.getContext()
-                .map(SecurityContext::getAuthentication)
-                .filter(authentication -> authentication != null
-                && authentication.isAuthenticated()
-                && authentication.getName() != null
-                && !authentication.getName().isBlank()
-                && !"anonymousUser".equals(authentication.getName()))
-                .map(authentication -> authentication.getName())
-                .switchIfEmpty(Mono.fromSupplier(() -> resolveClientKey(exchange)));
+        // Prefer gateway-injected identity for stable per-user keys; fallback to principal, then IP.
+        return exchange -> {
+            String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
+            if (userId != null && !userId.isBlank()) {
+                return Mono.just(userId.trim());
+            }
+
+            return ReactiveSecurityContextHolder.getContext()
+                    .map(SecurityContext::getAuthentication)
+                    .filter(authentication -> authentication != null
+                    && authentication.isAuthenticated()
+                    && authentication.getName() != null
+                    && !authentication.getName().isBlank()
+                    && !"anonymousUser".equals(authentication.getName()))
+                    .map(authentication -> authentication.getName())
+                    .switchIfEmpty(Mono.fromSupplier(() -> resolveClientKey(exchange)));
+        };
     }
 
     private String resolveClientKey(ServerWebExchange exchange) {

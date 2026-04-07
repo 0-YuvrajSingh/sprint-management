@@ -1,4 +1,4 @@
-export type StoryStatus = "BACKLOG" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+export type StoryStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
 export type StoryPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export interface Story {

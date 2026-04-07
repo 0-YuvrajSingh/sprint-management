@@ -1,5 +1,5 @@
 import type { User } from "@/features/users/types";
-import { apiClient } from "@/shared/api/client";
+import api from "@/shared/api/api";
 import type { PageableResponse } from "@/shared/types/api";
 
 interface UserFilters {
@@ -8,7 +8,7 @@ interface UserFilters {
 }
 
 export async function listUsers({ page, size }: UserFilters) {
-  const response = await apiClient.get<PageableResponse<User>>("/api/users", {
+  const response = await api.get<PageableResponse<User>>("/users", {
     params: {
       page,
       size,

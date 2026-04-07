@@ -47,8 +47,9 @@ export function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: loginWithPassword,
-    onSuccess: ({ token }) => {
-      login(token);
+    onSuccess: (data) => {
+      const { token, user } = data;
+      login(token, user);
       navigate(redirectTo, { replace: true });
     },
   });

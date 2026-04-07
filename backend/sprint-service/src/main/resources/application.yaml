@@ -58,6 +58,3 @@ gateway:
 
 audit:
   activity-service-url: ${ACTIVITY_SERVICE_URL:http://activity-service}
-
-jwt:
-  secret: ${JWT_SECRET}

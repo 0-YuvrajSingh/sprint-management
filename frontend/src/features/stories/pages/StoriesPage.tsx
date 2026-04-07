@@ -1,12 +1,9 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { KanbanSquare } from "lucide-react";
+import { useProjects } from "@/features/projects/hooks/useProjects";
+import { useSprints } from "@/features/sprints/hooks/useSprints";
 import { updateStory } from "@/features/stories/api/storiesApi";
 import { StoryKanbanBoard } from "@/features/stories/components/StoryKanbanBoard";
 import { useStories } from "@/features/stories/hooks/useStories";
 import type { Story, StoryStatus } from "@/features/stories/types";
-import { useProjects } from "@/features/projects/hooks/useProjects";
-import { useSprints } from "@/features/sprints/hooks/useSprints";
 import { Card } from "@/shared/ui/Card";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { ErrorState } from "@/shared/ui/ErrorState";
@@ -14,6 +11,9 @@ import { LoadingState } from "@/shared/ui/LoadingState";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { PageTransition } from "@/shared/ui/PageTransition";
 import { Select } from "@/shared/ui/Select";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { KanbanSquare } from "lucide-react";
+import { useState } from "react";
 
 export function StoriesPage() {
   const queryClient = useQueryClient();
@@ -49,7 +49,7 @@ export function StoriesPage() {
   const projects = projectsQuery.data?.content ?? [];
   const sprints = sprintsQuery.data?.content ?? [];
   const stories = storiesQuery.data?.content ?? [];
-  const todoCount = stories.filter((story) => story.status === "BACKLOG").length;
+  const todoCount = stories.filter((story) => story.status === "TODO").length;
   const inProgressCount = stories.filter((story) => story.status === "IN_PROGRESS" || story.status === "IN_REVIEW").length;
   const doneCount = stories.filter((story) => story.status === "DONE").length;
 

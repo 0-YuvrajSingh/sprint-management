@@ -38,7 +38,7 @@ public class ActivityAuditClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Gateway-Secret", gatewaySecret);
-        headers.set("X-User-Email", actor.email());
+        headers.set("X-User-Id", actor.userId());
         headers.set("X-User-Role", actor.role());
         headers.set("Content-Type", "application/json");
 
@@ -58,14 +58,14 @@ public class ActivityAuditClient {
     private Actor resolveActor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
-            return new Actor("system@sprint-service", "ADMIN");
+            return new Actor("system-sprint-service", "ADMIN");
         }
 
-        String email = authentication.getName() == null || authentication.getName().isBlank()
-                ? "system@sprint-service"
+        String userId = authentication.getName() == null || authentication.getName().isBlank()
+                ? "system-sprint-service"
                 : authentication.getName();
 
-        return new Actor(email, resolveRole(authentication.getAuthorities()));
+        return new Actor(userId, resolveRole(authentication.getAuthorities()));
     }
 
     private String resolveRole(Collection<? extends GrantedAuthority> authorities) {
@@ -80,7 +80,7 @@ public class ActivityAuditClient {
         return "ADMIN";
     }
 
-    private record Actor(String email, String role) {
+    private record Actor(String userId, String role) {
 
     }
 

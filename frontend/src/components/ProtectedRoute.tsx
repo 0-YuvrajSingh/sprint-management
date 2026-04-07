@@ -35,10 +35,10 @@ export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
-  // Logged in but role not allowed → send to projects (safe default)
+  // Logged in but role not allowed → send to home (safe default)
   // This handles cases like a VIEWER trying to access /users (ADMIN only)
   if (allowedRoles && !hasRole(...allowedRoles)) {
-    return <Navigate to="/projects" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   // All checks passed → render the actual page

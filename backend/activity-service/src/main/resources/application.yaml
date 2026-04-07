@@ -11,7 +11,7 @@ spring:
       password: disabled
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/activity_db
+    url: jdbc:postgresql://localhost:5432/activitydb
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver

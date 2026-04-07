@@ -1,11 +1,19 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { motion, type Variants } from "framer-motion";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import authApi from "../api/auth.api";
+import Button from "../components/shared/Button";
 import { useAuth } from "../context/AuthContext";
+import AuthCard from "../features/auth/components/AuthCard";
+import AuthLayout from "../features/auth/components/AuthLayout";
+import FormError from "../features/auth/components/FormError";
+import InputField from "../features/auth/components/InputField";
+import PasswordInput from "../features/auth/components/PasswordInput";
+import SocialButton from "../features/auth/components/SocialButton";
 
 // ================================================================
 // STEP 1 — ZOD SCHEMA
@@ -29,6 +37,29 @@ const loginSchema = z.object({
 // Never write this interface manually — let Zod generate it
 type LoginFormData = z.infer<typeof loginSchema>;
 
+const demoCredentials = [
+  { role: "Admin", email: "sarah@agiletrack.com" },
+  { role: "Manager", email: "marcus@agiletrack.com" },
+  { role: "Developer", email: "emily@agiletrack.com" },
+] as const;
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06 },
+  },
+};
+
+const staggerItem: Variants = {
+  hidden: { opacity: 0, y: 6 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
+};
+
 // ================================================================
 // COMPONENT
 // ================================================================
@@ -39,16 +70,16 @@ export default function LoginPage() {
 
   // If already logged in, skip the login page entirely
   useEffect(() => {
-    if (isLoggedIn) navigate("/projects", { replace: true });
+    if (isLoggedIn) navigate("/dashboard", { replace: true });
   }, [isLoggedIn, navigate]);
 
   // ── STEP 2 — REACT HOOK FORM ─────────────────────────────
   // zodResolver connects the Zod schema to React Hook Form
   // form won't call onSubmit unless all schema rules pass
   const {
-    register,         // connects <input> to the form
-    handleSubmit,     // wraps onSubmit — only fires if validation passes
-    formState: { errors }, // per-field error messages from Zod
+    register,
+    handleSubmit,
+    formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
@@ -63,8 +94,8 @@ export default function LoginPage() {
 
     // Only runs if API call succeeded
     onSuccess: (authResponse) => {
-      login(authResponse);        // save token + set user in AuthContext
-      navigate("/projects", { replace: true }); // redirect
+      login(authResponse);
+      navigate("/dashboard", { replace: true });
     },
 
     // onError is optional — isError + error handle display below
@@ -78,204 +109,104 @@ export default function LoginPage() {
     mutate(data);
   };
 
-  // ================================================================
-  // RENDER
-  // ================================================================
+  const authError = isError ? (error instanceof Error ? error.message : "Sign in failed") : undefined;
+
+  const leftPanelContent = (
+    <motion.div
+      className="rounded-xl border border-white/20 bg-white/10 p-5 backdrop-blur-sm"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: "easeOut", delay: 0.1 }}
+    >
+      <p className="text-sm font-medium text-indigo-100">Quick demo access</p>
+      <ul className="mt-4 space-y-3">
+        {demoCredentials.map((item) => (
+          <li key={item.role} className="flex items-center justify-between gap-3">
+            <span className="text-sm text-indigo-50/90">{item.role}:</span>
+            <code className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold tracking-tight text-white">
+              {item.email}
+            </code>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 text-xs text-indigo-100/80">Password for all demo users: <span className="font-semibold text-white">Password@123</span></p>
+    </motion.div>
+  );
 
   return (
-    <div style={styles.root}>
-      <div style={styles.card}>
+    <AuthLayout
+      panelTitle="Welcome back"
+      panelDescription="Continue building amazing products with your team on AgileTrack."
+      panelContent={leftPanelContent}
+      formTitle="Sign in to your account"
+      formSubtitle="Welcome back. Please enter your details."
+    >
+      <AuthCard>
+        <motion.form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-4"
+          noValidate
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div variants={staggerItem}>
+            <FormError message={authError} />
+          </motion.div>
 
-        {/* Header */}
-        <div style={styles.header}>
-          <div style={styles.logo}>S</div>
-          <h1 style={styles.title}>SprintMS</h1>
-          <p style={styles.subtitle}>Sign in to your workspace</p>
-        </div>
-
-        {/* API error banner — only shows if mutation failed */}
-        {isError && (
-          <div style={styles.errorBanner}>
-            {error instanceof Error ? error.message : "Login failed"}
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} style={styles.form} noValidate>
-
-          {/* Email field */}
-          <div style={styles.field}>
-            <label style={styles.label} htmlFor="email">
-              Email
-            </label>
-            <input
+          <motion.div variants={staggerItem}>
+            <InputField
               id="email"
+              label="Email"
               type="email"
               autoComplete="email"
               placeholder="you@company.com"
-              style={{
-                ...styles.input,
-                // Red border if this field has a validation error
-                ...(errors.email ? styles.inputError : {}),
-              }}
-              // register() connects this input to React Hook Form
-              // it handles value, onChange, onBlur automatically
+              autoFocus
+              error={errors.email?.message}
               {...register("email")}
             />
-            {/* Per-field error from Zod — only shows after submit attempt */}
-            {errors.email && (
-              <span style={styles.fieldError}>{errors.email.message}</span>
-            )}
-          </div>
+          </motion.div>
 
-          {/* Password field */}
-          <div style={styles.field}>
-            <label style={styles.label} htmlFor="password">
-              Password
-            </label>
-            <input
+          <motion.div variants={staggerItem}>
+            <PasswordInput
               id="password"
-              type="password"
+              label="Password"
               autoComplete="current-password"
-              placeholder="••••••••"
-              style={{
-                ...styles.input,
-                ...(errors.password ? styles.inputError : {}),
-              }}
+              placeholder="Enter your password"
+              error={errors.password?.message}
+              labelAction={
+                <a href="#" className="text-xs font-medium text-indigo-600 transition-colors duration-200 hover:text-indigo-500">
+                  Forgot password?
+                </a>
+              }
               {...register("password")}
             />
-            {errors.password && (
-              <span style={styles.fieldError}>{errors.password.message}</span>
-            )}
-          </div>
+          </motion.div>
 
-          {/* Submit button */}
-          <button
-            type="submit"
-            disabled={isPending}
-            style={{
-              ...styles.button,
-              ...(isPending ? styles.buttonDisabled : {}),
-            }}
-          >
-            {isPending ? "Signing in..." : "Sign in"}
-          </button>
+          <motion.div variants={staggerItem}>
+            <Button type="submit" fullWidth isLoading={isPending} loadingText="Signing in...">
+              Sign In
+            </Button>
+          </motion.div>
 
-        </form>
-      </div>
-    </div>
+          <motion.div variants={staggerItem} className="flex items-center gap-3 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />
+            Or continue with
+            <span className="h-px flex-1 bg-slate-200" />
+          </motion.div>
+
+          <motion.div variants={staggerItem}>
+            <SocialButton text="Sign in with Google" disabled={isPending} />
+          </motion.div>
+        </motion.form>
+
+        <p className="mt-5 text-center text-sm text-slate-600">
+          Don&apos;t have an account? {" "}
+          <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-500">
+            Sign up
+          </Link>
+        </p>
+      </AuthCard>
+    </AuthLayout>
   );
 }
-
-// ================================================================
-// STYLES
-// Inline styles keep this file self-contained — no CSS file needed
-// Replace with your CSS framework classes if you add one later
-// ================================================================
-
-const styles: Record<string, React.CSSProperties> = {
-  root: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0f0f14",
-    fontFamily: "'JetBrains Mono', monospace",
-  },
-  card: {
-    width: "100%",
-    maxWidth: "400px",
-    backgroundColor: "#1a1a24",
-    border: "1px solid #2a2a3a",
-    borderRadius: "8px",
-    padding: "40px",
-  },
-  header: {
-    textAlign: "center",
-    marginBottom: "32px",
-  },
-  logo: {
-    width: "48px",
-    height: "48px",
-    backgroundColor: "#e8ff47",
-    borderRadius: "8px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "24px",
-    fontWeight: "800",
-    color: "#0f0f14",
-    margin: "0 auto 16px",
-  },
-  title: {
-    fontSize: "22px",
-    fontWeight: "700",
-    color: "#e2e2e8",
-    margin: "0 0 8px",
-  },
-  subtitle: {
-    fontSize: "13px",
-    color: "#5a5a72",
-    margin: 0,
-  },
-  errorBanner: {
-    backgroundColor: "rgba(255,77,109,0.1)",
-    border: "1px solid rgba(255,77,109,0.3)",
-    borderRadius: "4px",
-    padding: "10px 14px",
-    fontSize: "12px",
-    color: "#ff4d6d",
-    marginBottom: "20px",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-  field: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-  },
-  label: {
-    fontSize: "11px",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.1em",
-    color: "#5a5a72",
-  },
-  input: {
-    backgroundColor: "#0f0f14",
-    border: "1px solid #2a2a3a",
-    borderRadius: "4px",
-    padding: "10px 12px",
-    fontSize: "13px",
-    color: "#e2e2e8",
-    outline: "none",
-    fontFamily: "inherit",
-    transition: "border-color 0.15s",
-  },
-  inputError: {
-    borderColor: "#ff4d6d",
-  },
-  fieldError: {
-    fontSize: "11px",
-    color: "#ff4d6d",
-  },
-  button: {
-    padding: "12px",
-    backgroundColor: "#e8ff47",
-    color: "#0f0f14",
-    border: "none",
-    borderRadius: "4px",
-    fontSize: "14px",
-    fontWeight: "700",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    marginTop: "4px",
-    transition: "opacity 0.15s",
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  },
-};

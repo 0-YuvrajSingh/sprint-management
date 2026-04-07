@@ -1,0 +1,76 @@
+.home-page {
+  padding: 0.2rem 0 1rem;
+  font-family: "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+.home-hero {
+  border-radius: 1rem;
+  border: 1px solid #dbeafe;
+  background: linear-gradient(130deg, #0f172a, #0b3c5d 64%, #0b2545);
+  color: #dbeafe;
+  padding: 1.1rem;
+}
+
+.home-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+.home-hero h2 {
+  margin: 0.45rem 0 0;
+  font-size: clamp(1.4rem, 1.2vw + 1rem, 2rem);
+  color: #f8fafc;
+}
+
+.home-hero p {
+  margin: 0.58rem 0 0;
+  max-width: 42rem;
+  color: #cbd5e1;
+}
+
+.home-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.home-tile {
+  border-radius: 0.9rem;
+  border: 1px solid #bfdbfe;
+  background: #ffffff;
+  padding: 0.95rem;
+}
+
+.home-tile h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.home-tile p {
+  margin: 0.52rem 0 0;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.home-tile a {
+  margin-top: 0.85rem;
+  display: inline-flex;
+  text-decoration: none;
+  border-radius: 0.65rem;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  background: #f8fafc;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.68rem;
+}
+
+.home-tile a:hover {
+  border-color: #0369a1;
+}

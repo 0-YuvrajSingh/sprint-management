@@ -5,6 +5,9 @@ spring:
   application:
     name: api-gateway
 
+  main:
+    web-application-type: reactive
+
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
@@ -21,44 +24,30 @@ spring:
 
         # ─── AUTH SERVICE (public) ───────────────────────────────────────────
         - id: auth-service-login
+          order: -10
           uri: lb://auth-service
           predicates:
             - Path=/auth/login
           filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
-                redis-rate-limiter.requestedTokens: 1
-                key-resolver: "#{@userKeyResolver}"
-            - RewritePath=/auth/login, /api/v1/auth/login
+            - RewritePath=/auth/login,/api/v1/auth/login
 
         - id: auth-service-register
+          order: -10
           uri: lb://auth-service
           predicates:
             - Path=/auth/register
           filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 5
-                redis-rate-limiter.burstCapacity: 10
-                redis-rate-limiter.requestedTokens: 1
-                key-resolver: "#{@userKeyResolver}"
-            - RewritePath=/auth/register, /api/v1/auth/register
+            - RewritePath=/auth/register,/api/v1/auth/register
 
         # ─── AUTH SERVICE (protected — any other /auth/** route) ─────────────
         - id: auth-service-protected
+          order: 10
           uri: lb://auth-service
           predicates:
             - Path=/auth/**
+            - Header=Authorization, Bearer .+
           filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 30
-                redis-rate-limiter.requestedTokens: 1
-                key-resolver: "#{@userKeyResolver}"
-            - RewritePath=/auth/(?<segment>.*), /api/v1/auth/${segment}
+            - RewritePath=/auth(?<segment>/?.*),/api/v1/auth$\{segment}
 
         # ─── PROJECT SERVICE ─────────────────────────────────────────────────
         - id: project-service
@@ -66,13 +55,7 @@ spring:
           predicates:
             - Path=/api/projects/**
           filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 30
-                redis-rate-limiter.requestedTokens: 1
-                key-resolver: "#{@userKeyResolver}"
-            - RewritePath=/api/projects/(?<segment>.*), /api/v1/projects/${segment}
+            - RewritePath=/api/projects(?<segment>/?.*),/api/v1/projects$\{segment}
 
         # ─── SPRINT SERVICE ──────────────────────────────────────────────────
         - id: sprint-service
@@ -80,13 +63,7 @@ spring:
           predicates:
             - Path=/api/sprints/**
           filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 30
-                redis-rate-limiter.requestedTokens: 1
-                key-resolver: "#{@userKeyResolver}"
-            - RewritePath=/api/sprints/(?<segment>.*), /api/v1/sprints/${segment}
+            - RewritePath=/api/sprints(?<segment>/?.*),/api/v1/sprints$\{segment}
 
         # ─── STORIES SERVICE ─────────────────────────────────────────────────
         - id: stories-service
@@ -94,13 +71,7 @@ spring:
           predicates:
             - Path=/api/stories/**
           filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 30
-                redis-rate-limiter.requestedTokens: 1
-                key-resolver: "#{@userKeyResolver}"
-            - RewritePath=/api/stories/(?<segment>.*), /api/v1/stories/${segment}
+            - RewritePath=/api/stories(?<segment>/?.*),/api/v1/stories$\{segment}
 
         # ─── USER SERVICE ────────────────────────────────────────────────────
         - id: user-service
@@ -108,13 +79,7 @@ spring:
           predicates:
             - Path=/api/users/**
           filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 30
-                redis-rate-limiter.requestedTokens: 1
-                key-resolver: "#{@userKeyResolver}"
-            - RewritePath=/api/users/(?<segment>.*), /api/v1/users/${segment}
+            - RewritePath=/api/users(?<segment>/?.*),/api/v1/users$\{segment}
 
         # ─── ACTIVITY SERVICE ────────────────────────────────────────────────────
         - id: activity-service
@@ -122,13 +87,7 @@ spring:
           predicates:
             - Path=/api/activities/**
           filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 30
-                redis-rate-limiter.requestedTokens: 1
-                key-resolver: "#{@userKeyResolver}"
-            - RewritePath=/api/activities/(?<segment>.*), /api/v1/activities/${segment}
+            - RewritePath=/api/activities(?<segment>/?.*),/api/v1/activities$\{segment}
 
 # ─── EUREKA ──────────────────────────────────────────────────────────────────
 eureka:

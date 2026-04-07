@@ -1,292 +1,321 @@
-import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
-import sprintsApi from "../api/sprints.api";
+import usersApi from "../api/users.api";
 import { useAuth } from "../context/AuthContext";
-import type { Sprint, SprintStatus } from "../types";
+import type { User, UserRole } from "../types";
+import "./UsersPage.css";
 
-// ================================================================
-// SCHEMA
-// ================================================================
-
-const createSprintSchema = z.object({
-  name:       z.string().min(1, "Name is required"),
-  startDate:  z.string().min(1, "Start date is required"),
-  endDate:    z.string().min(1, "End date is required"),
-  projectId:  z.string().min(1, "Project ID is required"),
-}).refine((d) => new Date(d.endDate) > new Date(d.startDate), {
-  message: "End date must be after start date",
-  path: ["endDate"],
+const userSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Enter a valid email"),
+  role: z.enum(["ADMIN", "MANAGER", "DEVELOPER", "VIEWER"]),
 });
 
-type CreateSprintForm = z.infer<typeof createSprintSchema>;
+type UserFormData = z.infer<typeof userSchema>;
 
-// ================================================================
-// STATUS BADGE COLORS
-// ================================================================
+const ROLE_OPTIONS: UserRole[] = ["ADMIN", "MANAGER", "DEVELOPER", "VIEWER"];
 
-const statusColors: Record<SprintStatus, string> = {
-  PLANNED:   "#5a5a72",
-  ACTIVE:    "#e8ff47",
-  COMPLETED: "#47ff8a",
-  CANCELLED: "#ff4d6d",
+const roleToneClass: Record<UserRole, string> = {
+  ADMIN: "users-role-chip users-role-chip-admin",
+  MANAGER: "users-role-chip users-role-chip-manager",
+  DEVELOPER: "users-role-chip users-role-chip-developer",
+  VIEWER: "users-role-chip users-role-chip-viewer",
 };
 
-// ================================================================
-// COMPONENT
-// ================================================================
-
-export default function SprintsPage() {
-  const navigate = useNavigate();
-  const { hasRole } = useAuth();
+export default function UsersPage() {
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
+  const [query, setQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  // Read projectId from URL query params: /sprints?projectId=abc-123
-  // This is how ProjectsPage navigates here
-  const [searchParams] = useSearchParams();
-  const projectId = searchParams.get("projectId") ?? undefined;
-
-  // ── Fetch sprints ───────────────────────────────────────────
-  // queryKey includes projectId so different projects have separate caches
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["sprints", projectId],
-    queryFn: () => sprintsApi.list({ projectId }),
+    queryKey: ["users"],
+    queryFn: usersApi.list,
   });
 
-  const sprints = data?.content ?? [];
+  const users = data?.content ?? [];
+  const filteredUsers = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) {
+      return users;
+    }
 
-  // ── Create sprint ───────────────────────────────────────────
+    return users.filter((u) => `${u.name} ${u.email} ${u.role}`.toLowerCase().includes(term));
+  }, [users, query]);
+
   const createMutation = useMutation({
-    mutationFn: sprintsApi.create,
+    mutationFn: usersApi.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sprints"] });
-      setShowModal(false);
-      reset();
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      onCloseModal();
     },
   });
 
-  // ── Delete sprint ───────────────────────────────────────────
-  const deleteMutation = useMutation({
-    mutationFn: sprintsApi.delete,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sprints"] }),
-  });
-
-  // ── Update status ───────────────────────────────────────────
-  // Quick status change without opening a full edit modal
   const updateMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: SprintStatus }) =>
-      sprintsApi.update(id, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sprints"] }),
+    mutationFn: async (payload: UserFormData) => {
+      if (!editingUser) {
+        throw new Error("No selected user to update");
+      }
+
+      await usersApi.update(editingUser.id, {
+        name: payload.name,
+        email: payload.email,
+      });
+
+      if (payload.role !== editingUser.role) {
+        await usersApi.updateRole(editingUser.id, {
+          role: payload.role,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      onCloseModal();
+    },
   });
 
-  // ── Form ────────────────────────────────────────────────────
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<CreateSprintForm>({
-    resolver: zodResolver(createSprintSchema),
-    defaultValues: { projectId: projectId ?? "" },
+  const deleteMutation = useMutation({
+    mutationFn: usersApi.delete,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
-  const onSubmit = (data: CreateSprintForm) => createMutation.mutate(data);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      role: "VIEWER",
+    },
+  });
 
-  // ================================================================
-  // RENDER
-  // ================================================================
+  const onCloseModal = () => {
+    setShowModal(false);
+    setEditingUser(null);
+    reset({
+      name: "",
+      email: "",
+      role: "VIEWER",
+    });
+  };
+
+  const onOpenCreate = () => {
+    setEditingUser(null);
+    reset({
+      name: "",
+      email: "",
+      role: "VIEWER",
+    });
+    setShowModal(true);
+  };
+
+  const onOpenEdit = (targetUser: User) => {
+    setEditingUser(targetUser);
+    reset({
+      name: targetUser.name,
+      email: targetUser.email,
+      role: targetUser.role,
+    });
+    setShowModal(true);
+  };
+
+  const onSubmit = (payload: UserFormData) => {
+    if (editingUser) {
+      updateMutation.mutate(payload);
+      return;
+    }
+
+    createMutation.mutate(payload);
+  };
+
+  const onDelete = (targetUser: User) => {
+    if (targetUser.email === currentUser?.email) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(`Delete user \"${targetUser.email}\"?`);
+    if (!shouldDelete) {
+      return;
+    }
+
+    deleteMutation.mutate(targetUser.id);
+  };
+
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div style={styles.page}>
-
-      {/* Header */}
-      <div style={styles.pageHeader}>
+    <motion.div
+      className="users-page"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: "easeOut" }}
+    >
+      <section className="users-header-card">
         <div>
-          <button style={styles.backBtn} onClick={() => navigate("/projects")}>
-            ← Projects
-          </button>
-          <h1 style={styles.pageTitle}>Sprints</h1>
-          {projectId && <p style={styles.filterNote}>Filtered by project: {projectId}</p>}
+          <p className="users-kicker">Access Control</p>
+          <h2 className="users-title">Users</h2>
+          <p className="users-subtitle">Manage identities and roles for your workspace.</p>
         </div>
-        {hasRole("ADMIN", "MANAGER") && (
-          <button style={styles.btnPrimary} onClick={() => setShowModal(true)}>
-            + New Sprint
+
+        <div className="users-toolbar">
+          <label className="users-search" htmlFor="users-search-input">
+            <span>Search</span>
+            <input
+              id="users-search-input"
+              type="search"
+              placeholder="Filter by name, email, or role"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+
+          <button type="button" className="users-btn-primary" onClick={onOpenCreate}>
+            New User
           </button>
-        )}
-      </div>
-
-      {/* States */}
-      {isLoading && <p style={styles.stateText}>Loading sprints...</p>}
-      {isError   && <p style={styles.errorText}>Failed to load sprints.</p>}
-
-      {/* Sprint list */}
-      <div style={styles.list}>
-        {sprints.map((sprint: Sprint) => (
-          <div key={sprint.id} style={styles.card}>
-            <div style={styles.cardLeft}>
-              <span
-                style={{
-                  ...styles.statusBadge,
-                  color: statusColors[sprint.status],
-                  borderColor: statusColors[sprint.status],
-                }}
-              >
-                {sprint.status}
-              </span>
-              <div>
-                <h3 style={styles.cardTitle}>{sprint.name}</h3>
-                <p style={styles.cardDates}>
-                  {new Date(sprint.startDate).toLocaleDateString()} →{" "}
-                  {new Date(sprint.endDate).toLocaleDateString()}
-                </p>
-                {sprint.velocity != null && (
-                  <p style={styles.velocity}>Velocity: {sprint.velocity} pts</p>
-                )}
-              </div>
-            </div>
-
-            <div style={styles.cardActions}>
-              {/* Quick status transitions */}
-              {hasRole("ADMIN", "MANAGER") && sprint.status === "PLANNED" && (
-                <button
-                  style={styles.btnSuccess}
-                  onClick={() => updateMutation.mutate({ id: sprint.id, status: "ACTIVE" })}
-                >
-                  Start
-                </button>
-              )}
-              {hasRole("ADMIN", "MANAGER") && sprint.status === "ACTIVE" && (
-                <button
-                  style={styles.btnSecondary}
-                  onClick={() => updateMutation.mutate({ id: sprint.id, status: "COMPLETED" })}
-                >
-                  Complete
-                </button>
-              )}
-
-              {/* Navigate to stories for this sprint */}
-              <button
-                style={styles.btnSecondary}
-                onClick={() => navigate(`/stories?sprintId=${sprint.id}`)}
-              >
-                View Stories
-              </button>
-
-              {hasRole("ADMIN") && (
-                <button
-                  style={styles.btnDanger}
-                  onClick={() => deleteMutation.mutate(sprint.id)}
-                  disabled={deleteMutation.isPending}
-                >
-                  Delete
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Empty state */}
-      {!isLoading && sprints.length === 0 && (
-        <div style={styles.emptyState}>
-          <p>No sprints found.</p>
-          {hasRole("ADMIN", "MANAGER") && (
-            <button style={styles.btnPrimary} onClick={() => setShowModal(true)}>
-              Create first sprint
-            </button>
-          )}
         </div>
+      </section>
+
+      {isLoading && <p className="users-state-text">Loading users...</p>}
+      {isError && <p className="users-state-error">Failed to load users.</p>}
+
+      {!isLoading && !isError && filteredUsers.length > 0 && (
+        <section className="users-table-wrap" aria-label="Users list">
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th className="users-actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((u, index) => (
+                <motion.tr
+                  key={u.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(index * 0.035, 0.28) }}
+                >
+                  <td>
+                    <span className="users-cell-primary">{u.name}</span>
+                  </td>
+                  <td>{u.email}</td>
+                  <td>
+                    <span className={roleToneClass[u.role]}>{u.role}</span>
+                  </td>
+                  <td>
+                    <div className="users-row-actions">
+                      <button
+                        type="button"
+                        className="users-btn-secondary"
+                        onClick={() => onOpenEdit(u)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        className="users-btn-danger"
+                        disabled={deleteMutation.isPending || u.email === currentUser?.email}
+                        onClick={() => onDelete(u)}
+                        title={u.email === currentUser?.email ? "You cannot delete your own account" : "Delete user"}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
 
-      {/* Create modal */}
-      {showModal && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>New Sprint</h2>
-
-            {createMutation.isError && (
-              <div style={styles.errorBanner}>
-                {createMutation.error instanceof Error
-                  ? createMutation.error.message
-                  : "Failed to create sprint"}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit(onSubmit)} style={styles.form} noValidate>
-              <div style={styles.field}>
-                <label style={styles.label}>Sprint Name</label>
-                <input style={styles.input} placeholder="Sprint 1" {...register("name")} />
-                {errors.name && <span style={styles.fieldError}>{errors.name.message}</span>}
-              </div>
-
-              <div style={styles.field}>
-                <label style={styles.label}>Project ID</label>
-                <input style={styles.input} placeholder="Project UUID" {...register("projectId")} />
-                {errors.projectId && <span style={styles.fieldError}>{errors.projectId.message}</span>}
-              </div>
-
-              <div style={styles.row}>
-                <div style={{ ...styles.field, flex: 1 }}>
-                  <label style={styles.label}>Start Date</label>
-                  <input type="date" style={styles.input} {...register("startDate")} />
-                  {errors.startDate && <span style={styles.fieldError}>{errors.startDate.message}</span>}
-                </div>
-                <div style={{ ...styles.field, flex: 1 }}>
-                  <label style={styles.label}>End Date</label>
-                  <input type="date" style={styles.input} {...register("endDate")} />
-                  {errors.endDate && <span style={styles.fieldError}>{errors.endDate.message}</span>}
-                </div>
-              </div>
-
-              <div style={styles.modalActions}>
-                <button type="button" style={styles.btnSecondary} onClick={() => { setShowModal(false); reset(); }}>
-                  Cancel
-                </button>
-                <button type="submit" style={styles.btnPrimary} disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Create"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {!isLoading && !isError && filteredUsers.length === 0 && (
+        <section className="users-empty-state">
+          <h3>No users found</h3>
+          <p>Try another filter or create a new user.</p>
+        </section>
       )}
-    </div>
+
+      <AnimatePresence>
+        {showModal ? (
+          <motion.div
+            className="users-modal-overlay"
+            role="presentation"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                onCloseModal();
+              }
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <motion.div
+              className="users-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="user-modal-title"
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <h3 id="user-modal-title">{editingUser ? "Edit User" : "New User"}</h3>
+
+              {(createMutation.isError || updateMutation.isError) && (
+                <div className="users-error-banner" role="alert">
+                  {(createMutation.error instanceof Error && createMutation.error.message)
+                    || (updateMutation.error instanceof Error && updateMutation.error.message)
+                    || "Request failed"}
+                </div>
+              )}
+
+              <form className="users-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+                <div className="users-form-field">
+                  <label htmlFor="user-name">Name</label>
+                  <input id="user-name" placeholder="Alex Morgan" {...register("name")} />
+                  {errors.name && <span>{errors.name.message}</span>}
+                </div>
+
+                <div className="users-form-field">
+                  <label htmlFor="user-email">Email</label>
+                  <input id="user-email" type="email" placeholder="alex@agiletrack.com" {...register("email")} />
+                  {errors.email && <span>{errors.email.message}</span>}
+                </div>
+
+                <div className="users-form-field">
+                  <label htmlFor="user-role">Role</label>
+                  <select id="user-role" {...register("role")}>
+                    {ROLE_OPTIONS.map((role) => (
+                      <option key={role} value={role}>{role}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="users-modal-actions">
+                  <button type="button" className="users-btn-secondary" onClick={onCloseModal}>Cancel</button>
+                  <button type="submit" className="users-btn-primary" disabled={isSaving}>
+                    {isSaving ? "Saving..." : editingUser ? "Save Changes" : "Create User"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </motion.div>
   );
 }
-
-// ================================================================
-// STYLES
-// ================================================================
-
-const styles: Record<string, React.CSSProperties> = {
-  page:        { padding: "32px", maxWidth: "1000px", margin: "0 auto", fontFamily: "'JetBrains Mono', monospace" },
-  pageHeader:  { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" },
-  pageTitle:   { fontSize: "24px", fontWeight: "700", color: "#e2e2e8", margin: "4px 0" },
-  filterNote:  { fontSize: "11px", color: "#5a5a72", margin: "4px 0 0" },
-  backBtn:     { background: "none", border: "none", color: "#5a5a72", fontSize: "12px", cursor: "pointer", padding: 0, marginBottom: "8px", fontFamily: "inherit" },
-  list:        { display: "flex", flexDirection: "column", gap: "12px" },
-  card:        { backgroundColor: "#1a1a24", border: "1px solid #2a2a3a", borderRadius: "8px", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
-  cardLeft:    { display: "flex", alignItems: "center", gap: "16px" },
-  cardTitle:   { fontSize: "15px", fontWeight: "700", color: "#e2e2e8", margin: "0 0 4px" },
-  cardDates:   { fontSize: "12px", color: "#5a5a72", margin: 0 },
-  velocity:    { fontSize: "11px", color: "#5a5a72", margin: "4px 0 0" },
-  cardActions: { display: "flex", gap: "8px", alignItems: "center" },
-  statusBadge: { fontSize: "10px", border: "1px solid", borderRadius: "2px", padding: "3px 8px", textTransform: "uppercase" as const, letterSpacing: "0.1em", whiteSpace: "nowrap" as const },
-  emptyState:  { textAlign: "center", padding: "80px 20px", color: "#5a5a72", display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" },
-  stateText:   { color: "#5a5a72", fontSize: "14px" },
-  errorText:   { color: "#ff4d6d", fontSize: "14px" },
-  overlay:     { position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-  modal:       { backgroundColor: "#1a1a24", border: "1px solid #2a2a3a", borderRadius: "8px", padding: "32px", width: "100%", maxWidth: "480px" },
-  modalTitle:  { fontSize: "18px", fontWeight: "700", color: "#e2e2e8", margin: "0 0 24px" },
-  modalActions:{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "8px" },
-  form:        { display: "flex", flexDirection: "column", gap: "16px" },
-  row:         { display: "flex", gap: "12px" },
-  field:       { display: "flex", flexDirection: "column", gap: "6px" },
-  label:       { fontSize: "11px", textTransform: "uppercase" as const, letterSpacing: "0.1em", color: "#5a5a72" },
-  input:       { backgroundColor: "#0f0f14", border: "1px solid #2a2a3a", borderRadius: "4px", padding: "10px 12px", fontSize: "13px", color: "#e2e2e8", outline: "none", fontFamily: "inherit" },
-  fieldError:  { fontSize: "11px", color: "#ff4d6d" },
-  errorBanner: { backgroundColor: "rgba(255,77,109,0.1)", border: "1px solid rgba(255,77,109,0.3)", borderRadius: "4px", padding: "10px 14px", fontSize: "12px", color: "#ff4d6d", marginBottom: "16px" },
-  btnPrimary:  { padding: "10px 18px", backgroundColor: "#e8ff47", color: "#0f0f14", border: "none", borderRadius: "4px", fontSize: "13px", fontWeight: "700", cursor: "pointer", fontFamily: "inherit" },
-  btnSecondary:{ padding: "10px 18px", backgroundColor: "transparent", color: "#e2e2e8", border: "1px solid #2a2a3a", borderRadius: "4px", fontSize: "13px", cursor: "pointer", fontFamily: "inherit" },
-  btnSuccess:  { padding: "10px 18px", backgroundColor: "transparent", color: "#47ff8a", border: "1px solid rgba(71,255,138,0.3)", borderRadius: "4px", fontSize: "13px", cursor: "pointer", fontFamily: "inherit" },
-  btnDanger:   { padding: "10px 18px", backgroundColor: "transparent", color: "#ff4d6d", border: "1px solid rgba(255,77,109,0.3)", borderRadius: "4px", fontSize: "13px", cursor: "pointer", fontFamily: "inherit" },
-};

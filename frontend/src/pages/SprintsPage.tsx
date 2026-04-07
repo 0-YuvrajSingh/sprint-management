@@ -1,43 +1,65 @@
-import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import sprintsApi from "../api/sprints.api";
 import { useAuth } from "../context/AuthContext";
 import type { Sprint, SprintStatus } from "../types";
 
-// ================================================================
-// SCHEMA
-// ================================================================
-
 const createSprintSchema = z.object({
-  name:       z.string().min(1, "Name is required"),
-  startDate:  z.string().min(1, "Start date is required"),
-  endDate:    z.string().min(1, "End date is required"),
-  projectId:  z.string().min(1, "Project ID is required"),
-}).refine((d) => new Date(d.endDate) > new Date(d.startDate), {
+  name: z.string().min(1, "Name is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  projectId: z.string().min(1, "Project ID is required"),
+}).refine((data) => new Date(data.endDate) > new Date(data.startDate), {
   message: "End date must be after start date",
   path: ["endDate"],
 });
 
 type CreateSprintForm = z.infer<typeof createSprintSchema>;
 
-// ================================================================
-// STATUS BADGE COLORS
-// ================================================================
-
-const statusColors: Record<SprintStatus, string> = {
-  PLANNED:   "#5a5a72",
-  ACTIVE:    "#e8ff47",
-  COMPLETED: "#47ff8a",
-  CANCELLED: "#ff4d6d",
+const statusMeta: Record<SprintStatus, { chip: string; track: string; fill: string; progress: number }> = {
+  PLANNED: {
+    chip: "border-slate-300 bg-slate-100 text-slate-700",
+    track: "bg-slate-200",
+    fill: "bg-gradient-to-r from-slate-500 to-slate-600",
+    progress: 18,
+  },
+  ACTIVE: {
+    chip: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    track: "bg-cyan-100",
+    fill: "bg-gradient-to-r from-cyan-500 via-sky-500 to-indigo-500",
+    progress: 58,
+  },
+  COMPLETED: {
+    chip: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    track: "bg-emerald-100",
+    fill: "bg-gradient-to-r from-emerald-500 to-teal-500",
+    progress: 100,
+  },
+  CANCELLED: {
+    chip: "border-rose-200 bg-rose-50 text-rose-700",
+    track: "bg-rose-100",
+    fill: "bg-gradient-to-r from-rose-500 to-pink-500",
+    progress: 10,
+  },
 };
 
-// ================================================================
-// COMPONENT
-// ================================================================
+function toFormattedDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Date unavailable";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
 
 export default function SprintsPage() {
   const navigate = useNavigate();
@@ -45,13 +67,9 @@ export default function SprintsPage() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
 
-  // Read projectId from URL query params: /sprints?projectId=abc-123
-  // This is how ProjectsPage navigates here
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("projectId") ?? undefined;
 
-  // ── Fetch sprints ───────────────────────────────────────────
-  // queryKey includes projectId so different projects have separate caches
   const { data, isLoading, isError } = useQuery({
     queryKey: ["sprints", projectId],
     queryFn: () => sprintsApi.list({ projectId }),
@@ -59,7 +77,6 @@ export default function SprintsPage() {
 
   const sprints = data?.content ?? [];
 
-  // ── Create sprint ───────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: sprintsApi.create,
     onSuccess: () => {
@@ -69,224 +86,263 @@ export default function SprintsPage() {
     },
   });
 
-  // ── Delete sprint ───────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: sprintsApi.delete,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sprints"] }),
   });
 
-  // ── Update status ───────────────────────────────────────────
-  // Quick status change without opening a full edit modal
   const updateMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: SprintStatus }) =>
       sprintsApi.update(id, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sprints"] }),
   });
 
-  // ── Form ────────────────────────────────────────────────────
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<CreateSprintForm>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<CreateSprintForm>({
     resolver: zodResolver(createSprintSchema),
     defaultValues: { projectId: projectId ?? "" },
   });
 
-  const onSubmit = (data: CreateSprintForm) => createMutation.mutate(data);
-
-  // ================================================================
-  // RENDER
-  // ================================================================
+  const onSubmit = (formData: CreateSprintForm) => createMutation.mutate(formData);
 
   return (
-    <div style={styles.page}>
-
-      {/* Header */}
-      <div style={styles.pageHeader}>
-        <div>
-          <button style={styles.backBtn} onClick={() => navigate("/projects")}>
-            ← Projects
-          </button>
-          <h1 style={styles.pageTitle}>Sprints</h1>
-          {projectId && <p style={styles.filterNote}>Filtered by project: {projectId}</p>}
-        </div>
-        {hasRole("ADMIN", "MANAGER") && (
-          <button style={styles.btnPrimary} onClick={() => setShowModal(true)}>
-            + New Sprint
-          </button>
-        )}
-      </div>
-
-      {/* States */}
-      {isLoading && <p style={styles.stateText}>Loading sprints...</p>}
-      {isError   && <p style={styles.errorText}>Failed to load sprints.</p>}
-
-      {/* Sprint list */}
-      <div style={styles.list}>
-        {sprints.map((sprint: Sprint) => (
-          <div key={sprint.id} style={styles.card}>
-            <div style={styles.cardLeft}>
-              <span
-                style={{
-                  ...styles.statusBadge,
-                  color: statusColors[sprint.status],
-                  borderColor: statusColors[sprint.status],
-                }}
-              >
-                {sprint.status}
-              </span>
-              <div>
-                <h3 style={styles.cardTitle}>{sprint.name}</h3>
-                <p style={styles.cardDates}>
-                  {new Date(sprint.startDate).toLocaleDateString()} →{" "}
-                  {new Date(sprint.endDate).toLocaleDateString()}
-                </p>
-                {sprint.velocity != null && (
-                  <p style={styles.velocity}>Velocity: {sprint.velocity} pts</p>
-                )}
-              </div>
-            </div>
-
-            <div style={styles.cardActions}>
-              {/* Quick status transitions */}
-              {hasRole("ADMIN", "MANAGER") && sprint.status === "PLANNED" && (
-                <button
-                  style={styles.btnSuccess}
-                  onClick={() => updateMutation.mutate({ id: sprint.id, status: "ACTIVE" })}
-                >
-                  Start
-                </button>
-              )}
-              {hasRole("ADMIN", "MANAGER") && sprint.status === "ACTIVE" && (
-                <button
-                  style={styles.btnSecondary}
-                  onClick={() => updateMutation.mutate({ id: sprint.id, status: "COMPLETED" })}
-                >
-                  Complete
-                </button>
-              )}
-
-              {/* Navigate to stories for this sprint */}
-              <button
-                style={styles.btnSecondary}
-                onClick={() => navigate(`/stories?sprintId=${sprint.id}`)}
-              >
-                View Stories
-              </button>
-
-              {hasRole("ADMIN") && (
-                <button
-                  style={styles.btnDanger}
-                  onClick={() => deleteMutation.mutate(sprint.id)}
-                  disabled={deleteMutation.isPending}
-                >
-                  Delete
-                </button>
-              )}
-            </div>
+    <motion.div
+      className="mx-auto max-w-6xl space-y-4 pb-2"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: "easeOut" }}
+    >
+      <section className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-950 via-indigo-900 to-blue-900 p-5 text-indigo-50 shadow-[0_24px_58px_-34px_rgba(49,46,129,0.88)]">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <button
+              type="button"
+              className="mb-2 inline-flex items-center rounded-lg border border-indigo-300/30 bg-indigo-400/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-indigo-100 transition-colors hover:bg-indigo-400/20"
+              onClick={() => navigate("/projects")}
+            >
+              Back to Projects
+            </button>
+            <h1 className="text-3xl font-bold tracking-tight">Sprints</h1>
+            {projectId ? <p className="mt-1 text-sm text-indigo-200/90">Filtered by project {projectId}</p> : null}
           </div>
-        ))}
-      </div>
 
-      {/* Empty state */}
-      {!isLoading && sprints.length === 0 && (
-        <div style={styles.emptyState}>
+          {hasRole("ADMIN", "MANAGER") ? (
+            <button
+              type="button"
+              className="rounded-xl border border-indigo-200/40 bg-white/10 px-4 py-2 text-sm font-semibold text-indigo-50 transition-all hover:-translate-y-0.5 hover:bg-white/20"
+              onClick={() => setShowModal(true)}
+            >
+              New Sprint
+            </button>
+          ) : null}
+        </div>
+      </section>
+
+      {isLoading ? (
+        <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          Loading sprints...
+        </section>
+      ) : null}
+
+      {isError ? (
+        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          Failed to load sprints.
+        </section>
+      ) : null}
+
+      {!isLoading && sprints.length > 0 ? (
+        <motion.section
+          className="grid gap-3 md:grid-cols-2"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+          }}
+        >
+          {sprints.map((sprint: Sprint) => {
+            const meta = statusMeta[sprint.status];
+            const progress = sprint.velocity != null
+              ? Math.max(meta.progress, Math.min(100, Math.round((sprint.velocity / 40) * 100)))
+              : meta.progress;
+
+            return (
+              <motion.article
+                key={sprint.id}
+                className="rounded-2xl border border-indigo-100/80 bg-white/95 p-4 shadow-[0_16px_38px_-26px_rgba(49,46,129,0.42)]"
+                variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                whileHover={{ y: -4, boxShadow: "0 28px 54px -32px rgba(79,70,229,0.45)" }}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <span className={["inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]", meta.chip].join(" ")}>
+                      {sprint.status}
+                    </span>
+                    <h3 className="mt-2 text-lg font-semibold text-slate-900">{sprint.name}</h3>
+                    <p className="mt-1 text-xs text-slate-600">{toFormattedDate(sprint.startDate)} to {toFormattedDate(sprint.endDate)}</p>
+                  </div>
+
+                  {sprint.velocity != null ? (
+                    <span className="rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                      {sprint.velocity} pts
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                    <span>Progress signal</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <div className={["h-2 rounded-full", meta.track].join(" ")}>
+                    <motion.div
+                      className={["h-full rounded-full", meta.fill].join(" ")}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {hasRole("ADMIN", "MANAGER") && sprint.status === "PLANNED" ? (
+                    <button
+                      type="button"
+                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                      onClick={() => updateMutation.mutate({ id: sprint.id, status: "ACTIVE" })}
+                    >
+                      Start
+                    </button>
+                  ) : null}
+
+                  {hasRole("ADMIN", "MANAGER") && sprint.status === "ACTIVE" ? (
+                    <button
+                      type="button"
+                      className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                      onClick={() => updateMutation.mutate({ id: sprint.id, status: "COMPLETED" })}
+                    >
+                      Complete
+                    </button>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
+                    onClick={() => navigate(`/stories?sprintId=${sprint.id}`)}
+                  >
+                    View Stories
+                  </button>
+
+                  {hasRole("ADMIN") ? (
+                    <button
+                      type="button"
+                      className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                      onClick={() => deleteMutation.mutate(sprint.id)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      Delete
+                    </button>
+                  ) : null}
+                </div>
+              </motion.article>
+            );
+          })}
+        </motion.section>
+      ) : null}
+
+      {!isLoading && sprints.length === 0 ? (
+        <section className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/70 px-4 py-12 text-center text-slate-700">
           <p>No sprints found.</p>
-          {hasRole("ADMIN", "MANAGER") && (
-            <button style={styles.btnPrimary} onClick={() => setShowModal(true)}>
+          {hasRole("ADMIN", "MANAGER") ? (
+            <button
+              type="button"
+              className="mt-3 rounded-xl border border-indigo-300 bg-white px-4 py-2 text-sm font-semibold text-indigo-700"
+              onClick={() => setShowModal(true)}
+            >
               Create first sprint
             </button>
-          )}
-        </div>
-      )}
+          ) : null}
+        </section>
+      ) : null}
 
-      {/* Create modal */}
-      {showModal && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>New Sprint</h2>
+      <AnimatePresence>
+        {showModal ? (
+          <motion.div
+            className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/58 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="w-full max-w-xl rounded-2xl border border-indigo-100 bg-white p-5 shadow-[0_30px_70px_-36px_rgba(30,41,100,0.72)]"
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <h2 className="text-xl font-semibold text-slate-900">New Sprint</h2>
 
-            {createMutation.isError && (
-              <div style={styles.errorBanner}>
-                {createMutation.error instanceof Error
-                  ? createMutation.error.message
-                  : "Failed to create sprint"}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit(onSubmit)} style={styles.form} noValidate>
-              <div style={styles.field}>
-                <label style={styles.label}>Sprint Name</label>
-                <input style={styles.input} placeholder="Sprint 1" {...register("name")} />
-                {errors.name && <span style={styles.fieldError}>{errors.name.message}</span>}
-              </div>
-
-              <div style={styles.field}>
-                <label style={styles.label}>Project ID</label>
-                <input style={styles.input} placeholder="Project UUID" {...register("projectId")} />
-                {errors.projectId && <span style={styles.fieldError}>{errors.projectId.message}</span>}
-              </div>
-
-              <div style={styles.row}>
-                <div style={{ ...styles.field, flex: 1 }}>
-                  <label style={styles.label}>Start Date</label>
-                  <input type="date" style={styles.input} {...register("startDate")} />
-                  {errors.startDate && <span style={styles.fieldError}>{errors.startDate.message}</span>}
+              {createMutation.isError ? (
+                <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {createMutation.error instanceof Error ? createMutation.error.message : "Failed to create sprint"}
                 </div>
-                <div style={{ ...styles.field, flex: 1 }}>
-                  <label style={styles.label}>End Date</label>
-                  <input type="date" style={styles.input} {...register("endDate")} />
-                  {errors.endDate && <span style={styles.fieldError}>{errors.endDate.message}</span>}
-                </div>
-              </div>
+              ) : null}
 
-              <div style={styles.modalActions}>
-                <button type="button" style={styles.btnSecondary} onClick={() => { setShowModal(false); reset(); }}>
-                  Cancel
-                </button>
-                <button type="submit" style={styles.btnPrimary} disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Create"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+              <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-3" noValidate>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500" htmlFor="sprint-name">Sprint Name</label>
+                  <input id="sprint-name" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" placeholder="Sprint 14" {...register("name")} />
+                  {errors.name ? <p className="text-xs text-rose-600">{errors.name.message}</p> : null}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500" htmlFor="sprint-project-id">Project ID</label>
+                  <input id="sprint-project-id" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" placeholder="Project UUID" {...register("projectId")} />
+                  {errors.projectId ? <p className="text-xs text-rose-600">{errors.projectId.message}</p> : null}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500" htmlFor="sprint-start-date">Start Date</label>
+                    <input id="sprint-start-date" type="date" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" {...register("startDate")} />
+                    {errors.startDate ? <p className="text-xs text-rose-600">{errors.startDate.message}</p> : null}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500" htmlFor="sprint-end-date">End Date</label>
+                    <input id="sprint-end-date" type="date" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" {...register("endDate")} />
+                    {errors.endDate ? <p className="text-xs text-rose-600">{errors.endDate.message}</p> : null}
+                  </div>
+                </div>
+
+                <div className="mt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
+                    onClick={() => {
+                      setShowModal(false);
+                      reset();
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-xl border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white"
+                    disabled={createMutation.isPending}
+                  >
+                    {createMutation.isPending ? "Creating..." : "Create"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </motion.div>
   );
 }
-
-// ================================================================
-// STYLES
-// ================================================================
-
-const styles: Record<string, React.CSSProperties> = {
-  page:        { padding: "32px", maxWidth: "1000px", margin: "0 auto", fontFamily: "'JetBrains Mono', monospace" },
-  pageHeader:  { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" },
-  pageTitle:   { fontSize: "24px", fontWeight: "700", color: "#e2e2e8", margin: "4px 0" },
-  filterNote:  { fontSize: "11px", color: "#5a5a72", margin: "4px 0 0" },
-  backBtn:     { background: "none", border: "none", color: "#5a5a72", fontSize: "12px", cursor: "pointer", padding: 0, marginBottom: "8px", fontFamily: "inherit" },
-  list:        { display: "flex", flexDirection: "column", gap: "12px" },
-  card:        { backgroundColor: "#1a1a24", border: "1px solid #2a2a3a", borderRadius: "8px", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
-  cardLeft:    { display: "flex", alignItems: "center", gap: "16px" },
-  cardTitle:   { fontSize: "15px", fontWeight: "700", color: "#e2e2e8", margin: "0 0 4px" },
-  cardDates:   { fontSize: "12px", color: "#5a5a72", margin: 0 },
-  velocity:    { fontSize: "11px", color: "#5a5a72", margin: "4px 0 0" },
-  cardActions: { display: "flex", gap: "8px", alignItems: "center" },
-  statusBadge: { fontSize: "10px", border: "1px solid", borderRadius: "2px", padding: "3px 8px", textTransform: "uppercase" as const, letterSpacing: "0.1em", whiteSpace: "nowrap" as const },
-  emptyState:  { textAlign: "center", padding: "80px 20px", color: "#5a5a72", display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" },
-  stateText:   { color: "#5a5a72", fontSize: "14px" },
-  errorText:   { color: "#ff4d6d", fontSize: "14px" },
-  overlay:     { position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-  modal:       { backgroundColor: "#1a1a24", border: "1px solid #2a2a3a", borderRadius: "8px", padding: "32px", width: "100%", maxWidth: "480px" },
-  modalTitle:  { fontSize: "18px", fontWeight: "700", color: "#e2e2e8", margin: "0 0 24px" },
-  modalActions:{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "8px" },
-  form:        { display: "flex", flexDirection: "column", gap: "16px" },
-  row:         { display: "flex", gap: "12px" },
-  field:       { display: "flex", flexDirection: "column", gap: "6px" },
-  label:       { fontSize: "11px", textTransform: "uppercase" as const, letterSpacing: "0.1em", color: "#5a5a72" },
-  input:       { backgroundColor: "#0f0f14", border: "1px solid #2a2a3a", borderRadius: "4px", padding: "10px 12px", fontSize: "13px", color: "#e2e2e8", outline: "none", fontFamily: "inherit" },
-  fieldError:  { fontSize: "11px", color: "#ff4d6d" },
-  errorBanner: { backgroundColor: "rgba(255,77,109,0.1)", border: "1px solid rgba(255,77,109,0.3)", borderRadius: "4px", padding: "10px 14px", fontSize: "12px", color: "#ff4d6d", marginBottom: "16px" },
-  btnPrimary:  { padding: "10px 18px", backgroundColor: "#e8ff47", color: "#0f0f14", border: "none", borderRadius: "4px", fontSize: "13px", fontWeight: "700", cursor: "pointer", fontFamily: "inherit" },
-  btnSecondary:{ padding: "10px 18px", backgroundColor: "transparent", color: "#e2e2e8", border: "1px solid #2a2a3a", borderRadius: "4px", fontSize: "13px", cursor: "pointer", fontFamily: "inherit" },
-  btnSuccess:  { padding: "10px 18px", backgroundColor: "transparent", color: "#47ff8a", border: "1px solid rgba(71,255,138,0.3)", borderRadius: "4px", fontSize: "13px", cursor: "pointer", fontFamily: "inherit" },
-  btnDanger:   { padding: "10px 18px", backgroundColor: "transparent", color: "#ff4d6d", border: "1px solid rgba(255,77,109,0.3)", borderRadius: "4px", fontSize: "13px", cursor: "pointer", fontFamily: "inherit" },
-};

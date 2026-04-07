@@ -1,8 +1,3 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { ArrowRight, LockKeyhole, Mail, Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
-import { useLocation, useNavigate } from "react-router-dom";
 import { loginWithPassword } from "@/features/auth/api/authApi";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { LoginRequest } from "@/features/auth/types";
@@ -10,6 +5,11 @@ import type { NormalizedApiError } from "@/shared/types/api";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Input } from "@/shared/ui/Input";
+import { useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { ArrowRight, LockKeyhole, Mail, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const FEATURE_PILLS = [
   "Project delivery analytics",
@@ -21,14 +21,29 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+
+  const routeState = location.state as
+    | {
+        from?: { pathname?: string };
+        presetEmail?: string;
+        notice?: string;
+      }
+    | undefined;
+
   const [form, setForm] = useState<LoginRequest>({
-    email: "",
+    email: routeState?.presetEmail ?? "",
     password: "",
   });
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof LoginRequest, string>>>({});
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(routeState?.notice ?? null);
 
-  const redirectTo = (location.state as { from?: Location })?.from?.pathname ?? "/dashboard";
+  useEffect(() => {
+    if (routeState?.notice) {
+      setInfoMessage(routeState.notice);
+    }
+  }, [routeState?.notice]);
+
+  const redirectTo = routeState?.from?.pathname ?? "/dashboard";
 
   const loginMutation = useMutation({
     mutationFn: loginWithPassword,
@@ -191,6 +206,15 @@ export function LoginPage() {
                   >
                     Continue with Google
                   </Button>
+                </div>
+
+                <div className="flex items-center justify-between text-sm text-slate-600">
+                  <Link to="/" className="font-medium text-brand-700 hover:text-brand-800">
+                    Back to homepage
+                  </Link>
+                  <Link to="/register" className="font-medium text-brand-700 hover:text-brand-800">
+                    Create account
+                  </Link>
                 </div>
               </form>
 

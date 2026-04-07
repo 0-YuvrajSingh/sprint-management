@@ -1,6 +1,6 @@
+import type { Project } from "@/features/projects/types";
 import { apiClient } from "@/shared/api/client";
 import type { PageableResponse } from "@/shared/types/api";
-import type { Project } from "@/features/projects/types";
 
 interface ProjectListParams {
   page: number;
@@ -8,7 +8,7 @@ interface ProjectListParams {
 }
 
 export async function listProjects({ page, size }: ProjectListParams) {
-  const response = await apiClient.get<PageableResponse<Project>>("/api/v1/projects", {
+  const response = await apiClient.get<PageableResponse<Project>>("/api/projects", {
     params: {
       page,
       size,
@@ -20,6 +20,6 @@ export async function listProjects({ page, size }: ProjectListParams) {
 }
 
 export async function getProjectById(id: string) {
-  const response = await apiClient.get<Project>(`/api/v1/projects/${id}`);
+  const response = await apiClient.get<Project>(`/api/projects/${id}`);
   return response.data;
 }

@@ -1,7 +1,11 @@
+import type { AuthResponse, LoginRequest, RegisterRequest } from "@/features/auth/types";
 import { apiClient } from "@/shared/api/client";
-import type { AuthResponse, LoginRequest } from "@/features/auth/types";
 
 export async function loginWithPassword(payload: LoginRequest) {
-  const response = await apiClient.post<AuthResponse>("/api/v1/auth/login", payload);
+  const response = await apiClient.post<AuthResponse>("/auth/login", payload);
   return response.data;
+}
+
+export async function registerWithPassword(payload: RegisterRequest) {
+  await apiClient.post("/auth/register", payload);
 }

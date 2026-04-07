@@ -1,8 +1,9 @@
-import { Navigate, createBrowserRouter } from "react-router-dom";
-import { PublicOnlyRoute } from "@/features/auth/components/PublicOnlyRoute";
-import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
-import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { ActivityPage } from "@/features/activity/pages/ActivityPage";
+import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
+import { PublicOnlyRoute } from "@/features/auth/components/PublicOnlyRoute";
+import { HomePage } from "@/features/auth/pages/HomePage";
+import { LoginPage } from "@/features/auth/pages/LoginPage";
+import { RegisterPage } from "@/features/auth/pages/RegisterPage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { ProjectDetailPage } from "@/features/projects/pages/ProjectDetailPage";
 import { ProjectsPage } from "@/features/projects/pages/ProjectsPage";
@@ -10,14 +11,23 @@ import { SprintsPage } from "@/features/sprints/pages/SprintsPage";
 import { StoriesPage } from "@/features/stories/pages/StoriesPage";
 import { UsersPage } from "@/features/users/pages/UsersPage";
 import { AppLayout } from "@/layouts/AppLayout";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 
 export const appRouter = createBrowserRouter([
+  {
+    path: "/",
+    element: <HomePage />,
+  },
   {
     element: <PublicOnlyRoute />,
     children: [
       {
         path: "/login",
         element: <LoginPage />,
+      },
+      {
+        path: "/register",
+        element: <RegisterPage />,
       },
     ],
   },
@@ -27,10 +37,6 @@ export const appRouter = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          {
-            path: "/",
-            element: <Navigate to="/dashboard" replace />,
-          },
           {
             path: "/dashboard",
             element: <DashboardPage />,
@@ -65,6 +71,6 @@ export const appRouter = createBrowserRouter([
   },
   {
     path: "*",
-    element: <Navigate to="/dashboard" replace />,
+    element: <Navigate to="/" replace />,
   },
 ]);

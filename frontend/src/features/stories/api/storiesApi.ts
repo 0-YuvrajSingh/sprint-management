@@ -1,6 +1,6 @@
+import type { Story, StoryPatch, StoryStatus } from "@/features/stories/types";
 import { apiClient } from "@/shared/api/client";
 import type { PageableResponse } from "@/shared/types/api";
-import type { Story, StoryPatch, StoryStatus } from "@/features/stories/types";
 
 interface StoryFilters {
   page: number;
@@ -11,7 +11,7 @@ interface StoryFilters {
 }
 
 export async function listStories(filters: StoryFilters) {
-  const response = await apiClient.get<PageableResponse<Story>>("/api/v1/stories", {
+  const response = await apiClient.get<PageableResponse<Story>>("/api/stories", {
     params: {
       page: filters.page,
       size: filters.size,
@@ -26,6 +26,6 @@ export async function listStories(filters: StoryFilters) {
 }
 
 export async function updateStory(id: string, payload: StoryPatch) {
-  const response = await apiClient.patch<Story>(`/api/v1/stories/${id}`, payload);
+  const response = await apiClient.patch<Story>(`/api/stories/${id}`, payload);
   return response.data;
 }

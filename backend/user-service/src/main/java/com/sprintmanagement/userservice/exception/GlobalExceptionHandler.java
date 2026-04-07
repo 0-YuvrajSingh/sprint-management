@@ -150,9 +150,9 @@ public class GlobalExceptionHandler {
         return build(status, mapResponseStatusCode(status), message, request);
     }
 
-    @ExceptionHandler({NullPointerException.class, IllegalStateException.class})
+    @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnhandled(
-            RuntimeException ex, HttpServletRequest request) {
+            Exception ex, HttpServletRequest request) {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.USER_UNEXPECTED, "Internal server error", request);
     }
 

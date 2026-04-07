@@ -71,10 +71,20 @@ public class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler
 
     private HttpStatus resolveStatus(Throwable ex) {
         if (ex instanceof WebClientResponseException webClientResponseException) {
-            return HttpStatus.valueOf(webClientResponseException.getStatusCode().value());
+            try {
+                return HttpStatus.valueOf(webClientResponseException.getStatusCode().value());
+            } catch (IllegalArgumentException e) {
+                // Non-standard downstream status code; fallback to 502 Bad Gateway
+                return HttpStatus.BAD_GATEWAY;
+            }
         }
         if (ex instanceof ResponseStatusException responseStatusException) {
-            return HttpStatus.valueOf(responseStatusException.getStatusCode().value());
+            try {
+                return HttpStatus.valueOf(responseStatusException.getStatusCode().value());
+            } catch (IllegalArgumentException e) {
+                // Non-standard status code; fallback to 500 Internal Server Error
+                return HttpStatus.INTERNAL_SERVER_ERROR;
+            }
         }
         if (ex instanceof AuthenticationException) {
             return HttpStatus.UNAUTHORIZED;

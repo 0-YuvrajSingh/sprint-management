@@ -43,6 +43,7 @@ build/
 .next/
 out/
 coverage/
+*.tsbuildinfo
 
 frontend/node_modules/
 frontend/dist/

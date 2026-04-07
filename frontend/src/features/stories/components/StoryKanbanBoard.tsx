@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import type { DragEvent } from "react";
-import type { KanbanColumn, Story, StoryStatus } from "@/features/stories/types";
 import { StoryCard } from "@/features/stories/components/StoryCard";
+import type { KanbanColumn, Story, StoryStatus } from "@/features/stories/types";
 import { cn } from "@/shared/lib/cn";
+import type { DragEvent } from "react";
+import { useEffect, useState } from "react";
 
 const columnMeta: Record<KanbanColumn, { title: string; description: string }> = {
   TODO: {
@@ -42,7 +42,7 @@ function columnToStatus(column: KanbanColumn, currentStatus: StoryStatus): Story
     return currentStatus === "IN_REVIEW" ? "IN_REVIEW" : "IN_PROGRESS";
   }
 
-  return "BACKLOG";
+  return "TODO";
 }
 
 function buildBoard(stories: Story[]): BoardState {

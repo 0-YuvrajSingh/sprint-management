@@ -5,6 +5,12 @@ spring:
   application:
     name: auth-service
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+
   datasource:
     url: jdbc:postgresql://localhost:5432/authdb
     username: ${DB_USERNAME:postgres}
@@ -43,7 +49,8 @@ springdoc:
 
 jwt:
   secret: ${JWT_SECRET}
-  expiration: 86400000
+  access-expiration: 900000
+  refresh-expiration: 1209600000
 
 gateway:
   secret: ${GATEWAY_SECRET}

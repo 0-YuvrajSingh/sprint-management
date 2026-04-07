@@ -1,9 +1,11 @@
 import { ActivityPage } from "@/features/activity/pages/ActivityPage";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
 import { PublicOnlyRoute } from "@/features/auth/components/PublicOnlyRoute";
+import { RoleProtectedRoute } from "@/features/auth/components/RoleProtectedRoute";
 import { HomePage } from "@/features/auth/pages/HomePage";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { RegisterPage } from "@/features/auth/pages/RegisterPage";
+import { UnauthorizedPage } from "@/features/auth/pages/UnauthorizedPage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { ProjectDetailPage } from "@/features/projects/pages/ProjectDetailPage";
 import { ProjectsPage } from "@/features/projects/pages/ProjectsPage";
@@ -58,16 +60,25 @@ export const appRouter = createBrowserRouter([
             element: <StoriesPage />,
           },
           {
-            path: "/users",
-            element: <UsersPage />,
-          },
-          {
-            path: "/activity",
-            element: <ActivityPage />,
+            element: <RoleProtectedRoute allowedRoles={["ADMIN"]} />,
+            children: [
+              {
+                path: "/users",
+                element: <UsersPage />,
+              },
+              {
+                path: "/activity",
+                element: <ActivityPage />,
+              },
+            ],
           },
         ],
       },
     ],
+  },
+  {
+    path: "/unauthorized",
+    element: <UnauthorizedPage />,
   },
   {
     path: "*",

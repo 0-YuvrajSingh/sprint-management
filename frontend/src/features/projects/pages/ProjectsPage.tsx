@@ -1,11 +1,10 @@
-import { useState } from "react";
-import { FolderKanban } from "lucide-react";
+import { CreateProjectModal } from "@/features/projects/components/CreateProjectModal";
+import { ProjectsTable } from "@/features/projects/components/ProjectsTable";
 import { useProjects } from "@/features/projects/hooks/useProjects";
+import { deriveProjectInsight } from "@/features/projects/lib/projectInsights";
 import { useSprints } from "@/features/sprints/hooks/useSprints";
 import { useStories } from "@/features/stories/hooks/useStories";
 import { useUsers } from "@/features/users/hooks/useUsers";
-import { deriveProjectInsight } from "@/features/projects/lib/projectInsights";
-import { ProjectsTable } from "@/features/projects/components/ProjectsTable";
 import { Card } from "@/shared/ui/Card";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { ErrorState } from "@/shared/ui/ErrorState";
@@ -13,6 +12,8 @@ import { LoadingState } from "@/shared/ui/LoadingState";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { PageTransition } from "@/shared/ui/PageTransition";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
+import { FolderKanban } from "lucide-react";
+import { useState } from "react";
 
 export function ProjectsPage() {
   const [page, setPage] = useState(0);
@@ -48,6 +49,7 @@ export function ProjectsPage() {
       <PageHeader
         title="Projects"
         description="Track project health across sprint activity, story throughput, and team ownership."
+        actions={<CreateProjectModal />}
       />
 
       <div className="grid gap-4 md:grid-cols-3">

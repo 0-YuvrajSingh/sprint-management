@@ -51,10 +51,6 @@ springdoc:
 gateway:
   secret: ${GATEWAY_SECRET}
 
-# JWT secret used by common-security for token parsing/validation.
-jwt:
-  secret: ${JWT_SECRET}
-
 logging:
   level:
     org.springframework.security: INFO

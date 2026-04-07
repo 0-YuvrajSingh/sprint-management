@@ -52,10 +52,6 @@ springdoc:
   default-produces-media-type: application/json
 
 # ─── SECRETS (move to env vars in production) ────────────────────────────────
-# Fix #1: add JWT_SECRET placeholder
-jwt:
-  secret: ${JWT_SECRET}
-
 gateway:
   secret: ${GATEWAY_SECRET}
 

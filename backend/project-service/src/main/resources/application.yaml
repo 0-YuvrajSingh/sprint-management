@@ -53,9 +53,6 @@ springdoc:
     try-it-out-enabled: true
   default-produces-media-type: application/json
 
-jwt:
-  secret: ${JWT_SECRET}
-
 gateway:
   secret: ${GATEWAY_SECRET}
 

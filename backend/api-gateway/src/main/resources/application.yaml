@@ -40,21 +40,56 @@ spring:
       routes:
 
         # ─── AUTH SERVICE (public) ───────────────────────────────────────────
+        - id: auth-service-login-v1
+          order: -20
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/login
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: '#{@userKeyResolver}'
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+
         - id: auth-service-login
           order: -10
           uri: lb://auth-service
           predicates:
             - Path=/auth/login
           filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: '#{@userKeyResolver}'
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
             - RewritePath=/auth/login,/api/v1/auth/login
 
         - id: auth-service-register
           order: -10
           uri: lb://auth-service
           predicates:
-            - Path=/auth/register
+            - Path=/auth/register,/api/v1/auth/register
           filters:
             - RewritePath=/auth/register,/api/v1/auth/register
+
+        - id: auth-service-refresh
+          order: -10
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/refresh,/api/v1/auth/refresh
+          filters:
+            - RewritePath=/auth/refresh,/api/v1/auth/refresh
+
+        - id: auth-service-logout
+          order: -10
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/logout,/api/v1/auth/logout
+          filters:
+            - RewritePath=/auth/logout,/api/v1/auth/logout
 
         # ─── AUTH SERVICE (protected — any other /auth/** route) ─────────────
         - id: auth-service-protected
@@ -62,15 +97,22 @@ spring:
           uri: lb://auth-service
           predicates:
             - Path=/auth/**
-            - Header=Authorization, Bearer .+
           filters:
             - RewritePath=/auth(?<segment>/?.*),/api/v1/auth$\{segment}
+
+        - id: auth-service-protected-v1
+          order: 10
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/**
 
         # ─── PROJECT SERVICE ─────────────────────────────────────────────────
         - id: project-service
           uri: lb://project-service
           predicates:
-            - Path=/api/projects/**
+            - Path=/api/projects/**,/api/v1/projects/**
+          metadata:
+            requiredRoles: ADMIN,MANAGER,DEVELOPER,VIEWER
           filters:
             - RewritePath=/api/projects(?<segment>/?.*),/api/v1/projects$\{segment}
 
@@ -78,7 +120,7 @@ spring:
         - id: sprint-service
           uri: lb://sprint-service
           predicates:
-            - Path=/api/sprints/**
+            - Path=/api/sprints/**,/api/v1/sprints/**
           filters:
             - RewritePath=/api/sprints(?<segment>/?.*),/api/v1/sprints$\{segment}
 
@@ -86,7 +128,7 @@ spring:
         - id: stories-service
           uri: lb://stories-service
           predicates:
-            - Path=/api/stories/**
+            - Path=/api/stories/**,/api/v1/stories/**
           filters:
             - RewritePath=/api/stories(?<segment>/?.*),/api/v1/stories$\{segment}
 
@@ -94,7 +136,9 @@ spring:
         - id: user-service
           uri: lb://user-service
           predicates:
-            - Path=/api/users/**
+            - Path=/api/users/**,/api/v1/users/**,/api/admin/**,/api/v1/admin/**
+          metadata:
+            requiredRoles: ADMIN
           filters:
             - RewritePath=/api/users(?<segment>/?.*),/api/v1/users$\{segment}
 
@@ -102,7 +146,7 @@ spring:
         - id: activity-service
           uri: lb://activity-service
           predicates:
-            - Path=/api/activities/**
+            - Path=/api/activities/**,/api/v1/activities/**
           filters:
             - RewritePath=/api/activities(?<segment>/?.*),/api/v1/activities$\{segment}
 

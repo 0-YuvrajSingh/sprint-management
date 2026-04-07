@@ -1,5 +1,5 @@
 import type { Sprint, SprintStatus } from "@/features/sprints/types";
-import { apiClient } from "@/shared/api/client";
+import api from "@/shared/api/api";
 import type { PageableResponse } from "@/shared/types/api";
 
 interface SprintFilters {
@@ -10,7 +10,7 @@ interface SprintFilters {
 }
 
 export async function listSprints(filters: SprintFilters) {
-  const response = await apiClient.get<PageableResponse<Sprint>>("/api/sprints", {
+  const response = await api.get<PageableResponse<Sprint>>("/sprints", {
     params: {
       page: filters.page,
       size: filters.size,

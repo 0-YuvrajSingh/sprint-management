@@ -1,3 +1,5 @@
+import { User } from "@/features/users/types";
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -11,4 +13,5 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   token: string;
+  user: User;
 }

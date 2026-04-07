@@ -98,6 +98,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Dotenv -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
         <!-- Common Security -->
         <dependency>
             <groupId>com.sprintmanagement</groupId>

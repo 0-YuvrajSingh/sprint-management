@@ -1,5 +1,4 @@
 import type { Story, StoryPatch, StoryStatus } from "@/features/stories/types";
-import { apiClient } from "@/shared/api/client";
 import type { PageableResponse } from "@/shared/types/api";
 
 interface StoryFilters {

@@ -1,22 +1,34 @@
-import { ActivitySquare, CalendarRange, FolderKanban, LayoutDashboard, ListTodo, Users, X } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { UserRole } from "@/features/users/types";
 import { cn } from "@/shared/lib/cn";
+import {
+    ActivitySquare,
+    CalendarRange,
+    FolderKanban,
+    LayoutDashboard,
+    ListTodo,
+    Users,
+    X,
+} from "lucide-react";
+import { NavLink } from "react-router-dom";
 
-const navigationItems = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/projects", label: "Projects", icon: FolderKanban },
-  { to: "/sprints", label: "Sprints", icon: CalendarRange },
-  { to: "/stories", label: "Stories", icon: ListTodo },
-  { to: "/users", label: "Users", icon: Users },
-  { to: "/activity", label: "Activity", icon: ActivitySquare },
+const allNavItems = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["ADMIN", "MANAGER", "DEVELOPER", "VIEWER"] },
+  { to: "/projects", label: "Projects", icon: FolderKanban, roles: ["ADMIN", "MANAGER", "DEVELOPER", "VIEWER"] },
+  { to: "/sprints", label: "Sprints", icon: CalendarRange, roles: ["ADMIN", "MANAGER", "DEVELOPER"] },
+  { to: "/stories", label: "Stories", icon: ListTodo, roles: ["ADMIN", "MANAGER", "DEVELOPER"] },
+  { to: "/users", label: "Users", icon: Users, roles: ["ADMIN"] },
+  { to: "/activity", label: "Activity", icon: ActivitySquare, roles: ["ADMIN", "MANAGER"] },
 ];
 
 interface SidebarProps {
+  userRole: UserRole;
   mobileOpen: boolean;
   onClose: () => void;
 }
 
-export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
+export function Sidebar({ userRole, mobileOpen, onClose }: SidebarProps) {
+  const navigationItems = allNavItems.filter(item => item.roles.includes(userRole));
+
   return (
     <>
       <div

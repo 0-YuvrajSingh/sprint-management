@@ -99,6 +99,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Dotenv -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
         <!-- Internal: header-based authentication shared by all downstream services -->
         <dependency>
             <groupId>com.sprintmanagement</groupId>

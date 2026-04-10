@@ -143,11 +143,22 @@ public class AuthService {
     private void storeRefreshToken(Long userId, String refreshToken) {
         String key = refreshTokenKey(userId);
         String hashedToken = sha256(refreshToken);
-        redisTemplate.opsForValue().set(key, hashedToken, Duration.ofMillis(refreshTokenTtlMillis));
+        try {
+            redisTemplate.opsForValue().set(key, hashedToken, Duration.ofMillis(refreshTokenTtlMillis));
+        } catch (RuntimeException ex) {
+            log.warn("refresh_token_store_unavailable userId={}", userId, ex);
+        }
     }
 
     private boolean isRefreshTokenStored(Long userId, String refreshToken) {
-        String storedHash = redisTemplate.opsForValue().get(refreshTokenKey(userId));
+        String storedHash;
+        try {
+            storedHash = redisTemplate.opsForValue().get(refreshTokenKey(userId));
+        } catch (RuntimeException ex) {
+            log.warn("refresh_token_lookup_unavailable userId={}", userId, ex);
+            return false;
+        }
+
         if (storedHash == null || storedHash.isBlank()) {
             return false;
         }
@@ -160,7 +171,11 @@ public class AuthService {
     }
 
     private void revokeRefreshToken(Long userId) {
-        redisTemplate.delete(refreshTokenKey(userId));
+        try {
+            redisTemplate.delete(refreshTokenKey(userId));
+        } catch (RuntimeException ex) {
+            log.warn("refresh_token_revoke_unavailable userId={}", userId, ex);
+        }
     }
 
     private String refreshTokenKey(Long userId) {

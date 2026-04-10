@@ -83,14 +83,14 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ServletErrorResponseBuilder.badRequest(
-                        "Invalid value for parameter '%s'".formatted(ex.getName()), request));
+                        "Invalid value for parameter '%s'".formatted(ex.getName()), request, ErrorCode.BAD_REQUEST));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleMalformedJson(
             HttpMessageNotReadableException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ServletErrorResponseBuilder.badRequest("Malformed JSON request", request));
+                .body(ServletErrorResponseBuilder.badRequest("Malformed JSON request", request, ErrorCode.BAD_REQUEST));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
             IllegalArgumentException ex,
             HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ServletErrorResponseBuilder.badRequest(ex.getMessage(), request));
+                .body(ServletErrorResponseBuilder.badRequest(ex.getMessage(), request, ErrorCode.BAD_REQUEST));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

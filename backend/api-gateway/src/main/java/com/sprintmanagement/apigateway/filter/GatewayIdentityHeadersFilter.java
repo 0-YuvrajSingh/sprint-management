@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
@@ -116,36 +118,32 @@ public class GatewayIdentityHeadersFilter implements GlobalFilter, Ordered {
             }
 
             Boolean revoked = isAccessTokenBlacklisted(token);
-            if (revoked == null) {
-                return serviceUnavailable(sanitizedExchange, requestId, "Token revocation store unavailable");
-            }
-            if (revoked) {
+            if (Boolean.TRUE.equals(revoked)) {
                 return unauthorized(sanitizedExchange, requestId, "Token has been revoked");
+            }
+            if (revoked == null) {
+                log.warn("gateway_blacklist_unavailable requestId={} path={}", requestId, path);
             }
 
             if (isLogoutRoute(path) && !blacklistAccessToken(token, claims.getExpiration())) {
-                return serviceUnavailable(sanitizedExchange, requestId, "Unable to revoke access token");
+                log.warn("gateway_blacklist_write_unavailable requestId={} path={}", requestId, path);
             }
 
             if (!isAuthorizedForRoute(sanitizedExchange, path, role)) {
                 return forbidden(sanitizedExchange, requestId, userId, role, path, method, "Insufficient role for route");
             }
 
-            ServerHttpRequest requestWithIdentity = sanitizedExchange.getRequest().mutate()
-                    .headers(headers -> {
-                        headers.remove(HttpHeaders.AUTHORIZATION);
-                        headers.set("X-User-Id", userId);
-                        headers.set("X-User-Role", role);
-                        headers.set("X-Gateway-Secret", gatewaySecret);
+            ServerWebExchange forwardedExchange = withTransformedHeaders(sanitizedExchange, headers -> {
+                headers.remove(HttpHeaders.AUTHORIZATION);
+                headers.set("X-User-Id", userId);
+                headers.set("X-User-Role", role);
+                headers.set("X-Gateway-Secret", gatewaySecret);
 
-                        String email = claims.get("email", String.class);
-                        if (email != null && !email.isBlank()) {
-                            headers.set("X-User-Email", email);
-                        }
-                    })
-                    .build();
-
-            ServerWebExchange forwardedExchange = sanitizedExchange.mutate().request(requestWithIdentity).build();
+                String email = claims.get("email", String.class);
+                if (email != null && !email.isBlank()) {
+                    headers.set("X-User-Email", email);
+                }
+            });
             return chain.filter(forwardedExchange)
                     .doFinally(signal -> logRequest(userId, requestId, method, path, statusCode(forwardedExchange)));
         } catch (JwtException | IllegalArgumentException ex) {
@@ -168,16 +166,12 @@ public class GatewayIdentityHeadersFilter implements GlobalFilter, Ordered {
     }
 
     private ServerWebExchange sanitizeIncomingHeaders(ServerWebExchange exchange) {
-        ServerHttpRequest sanitizedRequest = exchange.getRequest().mutate()
-                .headers(headers -> {
-                    headers.remove("X-User-Id");
-                    headers.remove("X-User-Email");
-                    headers.remove("X-User-Role");
-                    headers.remove("X-Gateway-Secret");
-                })
-                .build();
-
-        return exchange.mutate().request(sanitizedRequest).build();
+        return withTransformedHeaders(exchange, headers -> {
+            headers.remove("X-User-Id");
+            headers.remove("X-User-Email");
+            headers.remove("X-User-Role");
+            headers.remove("X-Gateway-Secret");
+        });
     }
 
     private boolean isPublicRoute(ServerWebExchange exchange) {
@@ -285,10 +279,22 @@ public class GatewayIdentityHeadersFilter implements GlobalFilter, Ordered {
     }
 
     private ServerWebExchange stripAuthorizationHeader(ServerWebExchange exchange) {
-        ServerHttpRequest request = exchange.getRequest().mutate()
-                .headers(headers -> headers.remove(HttpHeaders.AUTHORIZATION))
-                .build();
-        return exchange.mutate().request(request).build();
+        return withTransformedHeaders(exchange, headers -> headers.remove(HttpHeaders.AUTHORIZATION));
+    }
+
+    private ServerWebExchange withTransformedHeaders(ServerWebExchange exchange, Consumer<HttpHeaders> transformer) {
+        HttpHeaders mutableHeaders = new HttpHeaders();
+        mutableHeaders.putAll(exchange.getRequest().getHeaders());
+        transformer.accept(mutableHeaders);
+
+        ServerHttpRequest decoratedRequest = new ServerHttpRequestDecorator(exchange.getRequest()) {
+            @Override
+            public HttpHeaders getHeaders() {
+                return HttpHeaders.readOnlyHttpHeaders(mutableHeaders);
+            }
+        };
+
+        return exchange.mutate().request(decoratedRequest).build();
     }
 
     private Boolean isAccessTokenBlacklisted(String token) {
@@ -468,4 +474,3 @@ public class GatewayIdentityHeadersFilter implements GlobalFilter, Ordered {
         );
     }
 }
-

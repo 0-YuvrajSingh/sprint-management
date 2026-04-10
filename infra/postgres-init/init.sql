@@ -1,0 +1,6 @@
+CREATE DATABASE authdb;
+CREATE DATABASE storiesdb;
+CREATE DATABASE projectdb;
+CREATE DATABASE sprintdb;
+CREATE DATABASE activitydb;
+CREATE DATABASE usersdb;

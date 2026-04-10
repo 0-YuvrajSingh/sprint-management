@@ -109,7 +109,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalArgument(
             IllegalArgumentException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ServletErrorResponseBuilder.badRequest(ex.getMessage(), request));
+                .body(ServletErrorResponseBuilder.badRequest(ex.getMessage(), request, ErrorCode.BAD_REQUEST));
     }
 
         @ExceptionHandler({NullPointerException.class, IllegalStateException.class})

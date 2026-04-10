@@ -71,7 +71,7 @@ spring:
           order: -10
           uri: lb://auth-service
           predicates:
-            - Path=/auth/register,/api/v1/auth/register
+            - Path=/auth/register
           filters:
             - RewritePath=/auth/register,/api/v1/auth/register
 
@@ -79,7 +79,7 @@ spring:
           order: -10
           uri: lb://auth-service
           predicates:
-            - Path=/auth/refresh,/api/v1/auth/refresh
+            - Path=/auth/refresh
           filters:
             - RewritePath=/auth/refresh,/api/v1/auth/refresh
 
@@ -87,7 +87,7 @@ spring:
           order: -10
           uri: lb://auth-service
           predicates:
-            - Path=/auth/logout,/api/v1/auth/logout
+            - Path=/auth/logout
           filters:
             - RewritePath=/auth/logout,/api/v1/auth/logout
 
@@ -179,4 +179,6 @@ management:
   endpoint:
     health:
       show-details: always
-
+  health:
+    redis:
+      enabled: false

@@ -15,6 +15,7 @@ public record TaskResponse (
         LocalDateTime deadline,
         UUID projectId,
         UUID assigneeId,
+        String assigneeEmail,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         Double position

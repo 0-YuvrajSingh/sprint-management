@@ -17,6 +17,7 @@ public class TaskMapper {
                 task.getDeadline(),
                 task.getProject().getId(),
                 task.getAssignee() != null ? task.getAssignee().getId() : null,
+                task.getAssignee() != null ? task.getAssignee().getEmail() : null,
                 task.getCreatedAt(),
                 task.getUpdatedAt(),
                 task.getPosition()

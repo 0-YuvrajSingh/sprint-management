@@ -58,7 +58,7 @@ export const Home: React.FC = () => {
   if (loading) {
     return (
       <div className="flex-grow flex items-center justify-center bg-cf-bgLight min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-orange"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary"></div>
       </div>
     );
   }
@@ -71,7 +71,7 @@ export const Home: React.FC = () => {
     <div className="flex-grow bg-cf-bgLight">
       <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 grid md:grid-cols-2 gap-12 items-center">
         <div className="animate-fadeUp">
-          <span className="inline-block bg-cf-orangeSoft text-cf-orange text-xs font-semibold px-3 py-1 rounded-full mb-5">
+          <span className="inline-block bg-cf-primarySoft text-cf-primary text-xs font-semibold px-3 py-1 rounded-full mb-5">
             Built for engineering teams
           </span>
           <h1 className="text-4xl md:text-5xl font-extrabold text-cf-textDark tracking-tight leading-tight">
@@ -84,7 +84,7 @@ export const Home: React.FC = () => {
           <div className="mt-8 flex items-center gap-4">
             <Link
               to="/register"
-              className="bg-cf-orange hover:bg-cf-orangeHover text-white font-semibold px-6 py-3 rounded-lg text-sm transition duration-150 shadow-cf-card-lg"
+              className="bg-cf-primary hover:bg-cf-primaryHover text-white font-semibold px-6 py-3 rounded-lg text-sm transition duration-150 shadow-cf-card-lg"
             >
               Get started free
             </Link>
@@ -111,7 +111,7 @@ export const Home: React.FC = () => {
             {
               title: 'Workspaces',
               desc: 'Group every project your organization runs under one coordinated space.',
-              accent: 'bg-cf-orangeSoft text-cf-orange',
+              accent: 'bg-cf-primarySoft text-cf-primary',
               icon: <path d="M4 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" />,
             },
             {

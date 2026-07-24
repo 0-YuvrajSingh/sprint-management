@@ -2,7 +2,8 @@ import type React from 'react';
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Menu, ChevronDown, LogOut } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { Menu, ChevronDown, LogOut, User, Sun, Moon } from 'lucide-react';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -13,6 +14,8 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  const { dark, toggle: toggleTheme } = useTheme();
 
   const handleLogout = async () => {
     await logout();
@@ -37,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
           to={isAuthenticated ? '/dashboard' : '/'}
           className="flex items-center space-x-1.5 font-bold text-lg tracking-tight"
         >
-          <span className="text-cf-orange font-extrabold font-sans">Agile</span>
+          <span className="text-cf-primary font-extrabold font-sans">Agile</span>
           <span>Track</span>
         </Link>
       </div>
@@ -45,6 +48,13 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
       <div className="flex items-center space-x-4">
         {isAuthenticated ? (
           <>
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-gray-400 hover:text-white transition rounded"
+              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {dark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <div className="relative">
               <button
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
@@ -52,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
                 aria-label="Open profile menu"
                 aria-expanded={profileDropdownOpen}
               >
-                <div className="w-7 h-7 bg-cf-orange text-white text-xs font-bold rounded-full flex items-center justify-center uppercase">
+                <div className="w-7 h-7 bg-cf-primary text-white text-xs font-bold rounded-full flex items-center justify-center uppercase">
                   {user?.email ? user.email.slice(0, 2) : 'US'}
                 </div>
                 <ChevronDown size={14} className="text-gray-400" />
@@ -65,6 +75,14 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
                     <div className="px-4 py-2 border-b border-cf-border text-xs text-cf-textMuted truncate">
                       {user?.email}
                     </div>
+                    <Link
+                      to="/profile"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="w-full text-left flex items-center space-x-2 px-4 py-2 text-sm text-cf-textDark hover:bg-cf-bgLight transition"
+                    >
+                      <User size={16} />
+                      <span>Profile</span>
+                    </Link>
                     <button
                       onClick={() => {
                         setProfileDropdownOpen(false);
@@ -84,14 +102,14 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
         ) : (
           <nav className="flex items-center space-x-6 text-sm font-medium">
             {location.pathname !== '/login' && (
-              <Link to="/login" className="hover:text-cf-orange transition duration-150">
+              <Link to="/login" className="hover:text-cf-primary transition duration-150">
                 Log In
               </Link>
             )}
             {location.pathname !== '/register' && (
               <Link
                 to="/register"
-                className="bg-cf-orange hover:bg-cf-orangeHover text-white px-4 py-2 rounded text-xs transition duration-150"
+                className="bg-cf-primary hover:bg-cf-primaryHover text-white px-4 py-2 rounded text-xs transition duration-150"
               >
                 Sign Up
               </Link>

@@ -15,13 +15,27 @@ export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error('Please enter email and password');
-      return;
+    setEmailError('');
+    setPasswordError('');
+
+    let valid = true;
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      valid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('Invalid email format');
+      valid = false;
     }
+    if (!password) {
+      setPasswordError('Password is required');
+      valid = false;
+    }
+    if (!valid) return;
 
     setLoading(true);
     try {
@@ -54,16 +68,18 @@ export const Login: React.FC = () => {
               label="Email address"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
               placeholder="name@company.com"
+              error={emailError}
               required
             />
             <Input
               label="Password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
               placeholder="••••••••"
+              error={passwordError}
               required
             />
             <Button
@@ -78,7 +94,7 @@ export const Login: React.FC = () => {
 
           <div className="mt-6 text-center text-sm text-cf-textMuted">
             Don&apos;t have an account?{' '}
-            <Link to="/register" className="text-cf-orange font-medium hover:underline">
+            <Link to="/register" className="text-cf-primary font-medium hover:underline">
               Create an account
             </Link>
           </div>

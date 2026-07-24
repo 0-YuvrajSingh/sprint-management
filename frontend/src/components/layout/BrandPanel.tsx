@@ -9,11 +9,11 @@ export const BrandPanel: React.FC<BrandPanelProps> = ({ heading, sub }) => {
   return (
     <div className="hidden md:flex relative flex-col justify-between bg-cf-navy text-white p-10 overflow-hidden">
       <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-cf-navySoft opacity-60 animate-blob" />
-      <div className="absolute -left-10 bottom-10 w-40 h-40 rounded-full bg-cf-orange/20 animate-float" />
+      <div className="absolute -left-10 bottom-10 w-40 h-40 rounded-full bg-cf-primary/20 animate-float" />
 
       <div className="relative z-10">
         <span className="font-bold text-lg tracking-tight">
-          <span className="text-cf-orange">Agile</span>Track
+          <span className="text-cf-primary">Agile</span>Track
         </span>
       </div>
 

@@ -31,7 +31,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <Card className="w-full max-w-sm shadow-2xl">
         <CardBody className="pt-6">
           <div className="flex items-start gap-4">
-            <div className={`p-2 rounded-full flex-shrink-0 ${isDestructive ? 'bg-red-100 text-red-600' : 'bg-cf-bgLight text-cf-orange'}`}>
+            <div className={`p-2 rounded-full flex-shrink-0 ${isDestructive ? 'bg-red-100 text-red-600' : 'bg-cf-bgLight text-cf-primary'}`}>
               <AlertTriangle size={20} />
             </div>
             <div>

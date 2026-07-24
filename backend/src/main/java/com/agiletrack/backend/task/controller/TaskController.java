@@ -135,6 +135,19 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{taskId}/position")
+    @Operation(summary = "Update task position", description = "Updates the position of a task within its column for reordering.")
+    public ResponseEntity<TaskResponse> updateTaskPosition(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID taskId,
+            @RequestBody Double position
+    ) {
+        return ResponseEntity.ok(
+                taskService.updateTaskPosition(workspaceId, projectId, taskId, position)
+        );
+    }
+
     @PutMapping("/{taskId}/assignee")
     @Operation(summary = "Assign task", description = "Assigns the task to a user who is a member of the workspace.")
     public ResponseEntity<TaskResponse> assignTask(

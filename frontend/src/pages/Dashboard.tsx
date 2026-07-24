@@ -53,7 +53,7 @@ export const Dashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-orange"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary"></div>
       </div>
     );
   }
@@ -73,17 +73,21 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Welcome Banner */}
-      <div className="bg-cf-navy text-white p-6 rounded shadow-cf-card flex flex-col md:flex-row md:items-center md:justify-between border border-cf-navyDark">
-        <div>
-          <h1 className="text-2xl font-bold font-sans">System Overview</h1>
-          <p className="text-sm text-gray-300 mt-1">Track projects across {workspaces.length} workspace{workspaces.length === 1 ? '' : 's'}.</p>
-        </div>
-        <div className="mt-4 md:mt-0 flex gap-3">
-          <Link to="/workspaces">
-            <Button variant="primary" className="text-xs font-semibold">
-              <Plus size={14} className="mr-1.5" /> Create Workspace
-            </Button>
-          </Link>
+      <div className="relative bg-gradient-to-br from-cf-navy via-cf-navy to-cf-navyDark text-white p-6 rounded-xl shadow-cf-card-lg overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-cf-primary/10 blur-xl" />
+        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-cf-primarySoft/10 blur-lg" />
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">System Overview</h1>
+            <p className="text-sm text-gray-300 mt-1">Track projects across <span className="text-cf-primarySoft font-semibold">{workspaces.length}</span> workspace{workspaces.length === 1 ? '' : 's'}.</p>
+          </div>
+          <div className="flex gap-3">
+            <Link to="/workspaces">
+              <Button className="text-xs font-semibold bg-white text-cf-navy hover:bg-gray-100 border-0">
+                <Plus size={14} className="mr-1.5" /> Create Workspace
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -91,7 +95,7 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card hoverable>
           <CardBody className="flex items-center space-x-4">
-            <div className="p-3 bg-cf-orange/10 text-cf-orange rounded">
+            <div className="p-3 bg-cf-primary/10 text-cf-primary rounded">
               <FolderKanban size={24} />
             </div>
             <div>
@@ -103,7 +107,7 @@ export const Dashboard: React.FC = () => {
         
         <Card hoverable>
           <CardBody className="flex items-center space-x-4">
-            <div className="p-3 bg-cf-orange/10 text-cf-orange rounded">
+            <div className="p-3 bg-cf-primary/10 text-cf-primary rounded">
               <ListTodo size={24} />
             </div>
             <div>
@@ -115,7 +119,7 @@ export const Dashboard: React.FC = () => {
 
         <Card hoverable>
           <CardBody className="flex items-center space-x-4">
-            <div className="p-3 bg-cf-orange/10 text-cf-orange rounded">
+            <div className="p-3 bg-cf-primary/10 text-cf-primary rounded">
               <Clock size={24} />
             </div>
             <div>

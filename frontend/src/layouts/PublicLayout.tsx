@@ -10,7 +10,7 @@ export const PublicLayout: React.FC = () => {
         <Outlet />
       </main>
       <footer className="bg-cf-navy text-gray-400 py-6 text-center text-xs border-t border-cf-navyDark flex-shrink-0">
-        <p>&copy; {new Date().getFullYear()} AgileTrack. Technical Agile Management Platform. Inspired by Cloudflare Classic.</p>
+        <p>&copy; {new Date().getFullYear()} AgileTrack. Agile project management for engineering teams.</p>
       </footer>
     </div>
   );

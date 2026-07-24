@@ -1,6 +1,7 @@
 import type React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -16,6 +17,8 @@ import Dashboard from './pages/Dashboard';
 import WorkspaceList from './pages/WorkspaceList';
 import WorkspaceDetail from './pages/WorkspaceDetail';
 import TaskBoard from './pages/TaskBoard';
+import WorkspaceMembers from './pages/WorkspaceMembers';
+import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
 // Route Protection Component
@@ -25,7 +28,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cf-bgLight">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-orange"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary"></div>
       </div>
     );
   }
@@ -39,7 +42,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cf-bgLight">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-orange"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary"></div>
       </div>
     );
   }
@@ -75,6 +78,8 @@ function AppRoutes() {
         <Route path="/workspaces" element={<WorkspaceList />} />
         <Route path="/workspaces/:workspaceId" element={<WorkspaceDetail />} />
         <Route path="/workspaces/:workspaceId/projects/:projectId" element={<TaskBoard />} />
+        <Route path="/workspaces/:workspaceId/members" element={<WorkspaceMembers />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
 
       {/* Fallback */}
@@ -86,6 +91,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <Toaster
           position="bottom-right"
@@ -105,6 +111,7 @@ export default function App() {
           <AppRoutes />
         </ErrorBoundary>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

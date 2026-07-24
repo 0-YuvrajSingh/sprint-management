@@ -2,14 +2,16 @@ import type React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiClient, getApiErrorMessage } from '../api/axios';
-import type { PageResponse, Project, Workspace } from '../types';
+import type { PageResponse, Project, Workspace, ProjectStatus } from '../types';
 import { Card, CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Pagination } from '../components/ui/Pagination';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
-import { FolderPlus, Calendar, ArrowRight, Trash2, Search } from 'lucide-react';
+import { FolderPlus, Calendar, ArrowRight, Trash2, Search, Users } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+
+const PROJECT_STATUSES: ProjectStatus[] = ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
 
 export const WorkspaceDetail: React.FC = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -107,12 +109,27 @@ export const WorkspaceDetail: React.FC = () => {
     try {
       await apiClient.delete(`/workspaces/${workspaceId}/projects/${deleteDialog.id}`);
       toast.success('Project deleted successfully');
-      await fetchData();
+      if (projects.length === 1 && page > 0) {
+        setPage(page - 1);
+      } else {
+        await fetchData();
+      }
     } catch (err: unknown) {
       console.error(err);
       toast.error(getApiErrorMessage(err, 'Failed to delete project.'));
     } finally {
       setDeleteDialog({ isOpen: false, id: null });
+    }
+  };
+
+  const handleStatusChange = async (projectId: string, newStatus: ProjectStatus) => {
+    try {
+      await apiClient.patch(`/workspaces/${workspaceId}/projects/${projectId}/status`, { status: newStatus });
+      await fetchData();
+      toast.success(`Project status updated to ${newStatus}`);
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error(getApiErrorMessage(err, 'Failed to update project status.'));
     }
   };
 
@@ -130,7 +147,7 @@ export const WorkspaceDetail: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-orange"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary"></div>
       </div>
     );
   }
@@ -141,7 +158,7 @@ export const WorkspaceDetail: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-cf-border pb-4 gap-4">
         <div>
           <div className="flex items-center space-x-2 text-xs text-cf-textMuted uppercase font-semibold tracking-wider">
-            <Link to="/workspaces" className="hover:text-cf-orange transition">Workspaces</Link>
+            <Link to="/workspaces" className="hover:text-cf-primary transition">Workspaces</Link>
             <span>/</span>
             <span className="text-cf-textDark">{workspace?.name}</span>
           </div>
@@ -149,11 +166,18 @@ export const WorkspaceDetail: React.FC = () => {
           <p className="text-xs text-cf-textMuted mt-1">Manage project pipelines inside this workspace</p>
         </div>
 
-        {workspace?.myRole !== 'VIEWER' && (
-          <Button onClick={() => setShowCreateModal(true)} size="sm" className="text-xs font-semibold">
-            <FolderPlus size={14} className="mr-1.5" /> New Project
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {workspace?.myRole !== 'VIEWER' && (
+            <Button onClick={() => setShowCreateModal(true)} size="sm" className="text-xs font-semibold">
+              <FolderPlus size={14} className="mr-1.5" /> New Project
+            </Button>
+          )}
+          <Link to={`/workspaces/${workspaceId}/members`}>
+            <Button variant="secondary" size="sm" className="text-xs font-semibold">
+              <Users size={14} className="mr-1.5" /> Members
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -164,7 +188,7 @@ export const WorkspaceDetail: React.FC = () => {
             placeholder="Search projects..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-cf-border rounded-md text-sm focus:outline-none focus:border-cf-orange focus:ring-1 focus:ring-cf-orange transition"
+            className="w-full pl-9 pr-4 py-2 bg-white border border-cf-border rounded-md text-sm focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition"
           />
         </div>
       </div>
@@ -188,9 +212,22 @@ export const WorkspaceDetail: React.FC = () => {
               <CardHeader className="bg-cf-bgLight flex justify-between items-start">
                 <div>
                   <h3 className="font-bold text-cf-textDark truncate max-w-[180px]">{proj.name}</h3>
-                  <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border mt-1.5 inline-block font-mono ${getStatusColor(proj.status)}`}>
-                    {proj.status}
-                  </span>
+                  {workspace?.myRole !== 'VIEWER' ? (
+                    <select
+                      value={proj.status}
+                      onChange={(e) => handleStatusChange(proj.id, e.target.value as ProjectStatus)}
+                      className={`text-[9px] uppercase px-1.5 py-0.5 rounded border mt-1.5 font-mono cursor-pointer focus:outline-none ${getStatusColor(proj.status)}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {PROJECT_STATUSES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border mt-1.5 inline-block font-mono ${getStatusColor(proj.status)}`}>
+                      {proj.status}
+                    </span>
+                  )}
                 </div>
                 {workspace?.myRole !== 'VIEWER' && (
                   <button
@@ -263,7 +300,7 @@ export const WorkspaceDetail: React.FC = () => {
                     Description
                   </label>
                   <textarea
-                    className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-orange focus:ring-1 focus:ring-cf-orange transition duration-150"
+                    className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition duration-150"
                     placeholder="Brief description of project goals..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}

@@ -16,21 +16,39 @@ export const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmError, setConfirmError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error('All fields are required');
-      return;
+    setEmailError('');
+    setPasswordError('');
+    setConfirmError('');
+
+    let valid = true;
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      valid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('Invalid email format');
+      valid = false;
     }
-    if (password.length < 8) {
-      toast.error('Password must be at least 8 characters long');
-      return;
+    if (!password) {
+      setPasswordError('Password is required');
+      valid = false;
+    } else if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      valid = false;
     }
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
+    if (!confirmPassword) {
+      setConfirmError('Please confirm your password');
+      valid = false;
+    } else if (password !== confirmPassword) {
+      setConfirmError('Passwords do not match');
+      valid = false;
     }
+    if (!valid) return;
 
     setLoading(true);
     try {
@@ -63,24 +81,27 @@ export const Register: React.FC = () => {
               label="Email address"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
               placeholder="name@company.com"
+              error={emailError}
               required
             />
             <Input
               label="Password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
               placeholder="Min. 8 characters"
+              error={passwordError}
               required
             />
             <Input
               label="Confirm password"
               type="password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => { setConfirmPassword(e.target.value); setConfirmError(''); }}
               placeholder="Confirm password"
+              error={confirmError}
               required
             />
             <Button
@@ -95,7 +116,7 @@ export const Register: React.FC = () => {
 
           <div className="mt-6 text-center text-sm text-cf-textMuted">
             Already have an account?{' '}
-            <Link to="/login" className="text-cf-orange font-medium hover:underline">
+            <Link to="/login" className="text-cf-primary font-medium hover:underline">
               Log in
             </Link>
           </div>

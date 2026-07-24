@@ -172,6 +172,7 @@ public class WorkspaceService {
         return workspaceMemberRepository.findByWorkspaceId(workspaceId)
                 .stream()
                 .map(member -> new com.agiletrack.backend.workspace.dto.WorkspaceMemberResponse(
+                        member.getId(),
                         member.getUser().getId(),
                         member.getUser().getEmail(),
                         member.getRole()
@@ -206,5 +207,22 @@ public class WorkspaceService {
 
     public boolean isWorkspaceMember(UUID workspaceId, UUID userId) {
         return workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
+    }
+
+    @Transactional
+    public void removeMember(UUID workspaceId, UUID memberId) {
+        Workspace workspace = getWorkspaceForAdmin(workspaceId);
+        WorkspaceMember member = workspaceMemberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+
+        if (!member.getWorkspace().getId().equals(workspaceId)) {
+            throw new IllegalArgumentException("Member does not belong to this workspace");
+        }
+
+        if (member.getRole() == WorkspaceRole.OWNER) {
+            throw new IllegalArgumentException("Cannot remove the workspace owner");
+        }
+
+        workspaceMemberRepository.delete(member);
     }
 }

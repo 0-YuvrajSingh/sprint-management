@@ -196,7 +196,7 @@ export const WorkspaceList: React.FC = () => {
                     Description
                   </label>
                   <textarea
-                    className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-orange focus:ring-1 focus:ring-cf-orange transition duration-150"
+                    className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition duration-150"
                     placeholder="Describe the target team or organization..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}

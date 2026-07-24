@@ -11,7 +11,7 @@ export const Card: React.FC<CardProps> = ({
   ...props
 }) => {
   const baseStyle = 'bg-white border border-cf-border rounded-lg shadow-cf-card overflow-hidden';
-  const hoverStyle = hoverable ? 'transition duration-200 hover:shadow-cf-card-lg hover:-translate-y-0.5 hover:border-cf-orange/30' : '';
+  const hoverStyle = hoverable ? 'transition duration-200 hover:shadow-cf-card-lg hover:-translate-y-0.5 hover:border-cf-primary/30' : '';
 
   return (
     <div

@@ -2,6 +2,7 @@ package com.agiletrack.backend.task.repository;
 
 import com.agiletrack.backend.task.entity.Task;
 import com.agiletrack.backend.task.entity.TaskStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -17,13 +18,17 @@ import org.springframework.data.repository.query.Param;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, UUID> {
 
+    @EntityGraph(attributePaths = {"assignee"})
     Page<Task> findByProjectId(UUID projectId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"assignee"})
     @Query("SELECT t FROM Task t WHERE t.project.id = :projectId AND (LOWER(t.title) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Task> findByProjectIdAndSearch(@Param("projectId") UUID projectId, @Param("search") String search, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"assignee"})
     List<Task> findByProjectId(UUID projectId);
 
+    @EntityGraph(attributePaths = {"assignee"})
     Optional<Task> findByIdAndProjectId(UUID id, UUID projectId);
 
     List<Task> findByProjectIdAndStatus(

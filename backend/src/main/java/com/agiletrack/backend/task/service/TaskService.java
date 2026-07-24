@@ -114,6 +114,14 @@ public class TaskService {
     }
 
     @Transactional
+    public TaskResponse updateTaskPosition(UUID workspaceId, UUID projectId, UUID taskId, Double position) {
+        requireMutationAccess(workspaceId);
+        Task task = getTask(workspaceId, projectId, taskId);
+        task.setPosition(position);
+        return taskMapper.toResponse(task);
+    }
+
+    @Transactional
     public void deleteTask(UUID workspaceId, UUID projectId, UUID taskId) {
         requireMutationAccess(workspaceId);
         Task task = getTask(workspaceId, projectId, taskId);

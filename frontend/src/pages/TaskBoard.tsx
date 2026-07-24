@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiClient, getApiErrorMessage } from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import type { PageResponse, Project, Task, TaskPriority, TaskStatus, Workspace } from '../types';
+import type { PageResponse, Project, Task, TaskPriority, TaskStatus, Workspace, WorkspaceMember } from '../types';
 import { Card, CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -27,9 +27,11 @@ export const TaskBoard: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'ALL'>('ALL');
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -45,6 +47,7 @@ export const TaskBoard: React.FC = () => {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [deadline, setDeadline] = useState('');
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
 
@@ -85,12 +88,19 @@ export const TaskBoard: React.FC = () => {
     if (workspaceId && projectId) {
       const load = async () => {
         try {
-          const [wsRes, projectRes] = await Promise.all([
+          const [wsRes, projectRes, tasksRes, membersRes] = await Promise.all([
             apiClient.get<Workspace>(`/workspaces/${workspaceId}`, { signal: controller.signal }),
-            apiClient.get<Project>(`/workspaces/${workspaceId}/projects/${projectId}`, { signal: controller.signal })
+            apiClient.get<Project>(`/workspaces/${workspaceId}/projects/${projectId}`, { signal: controller.signal }),
+            apiClient.get<PageResponse<Task>>(`/workspaces/${workspaceId}/projects/${projectId}/tasks`, {
+              params: { search: debouncedSearch, sort: 'position,asc' },
+              signal: controller.signal
+            }),
+            apiClient.get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`, { signal: controller.signal })
           ]);
           setWorkspace(wsRes.data);
           setProject(projectRes.data);
+          setTasks(sortTasks(tasksRes.data.content));
+          setMembers(membersRes.data);
         } catch (err) {
           if (controller.signal.aborted) return;
           console.error(err);
@@ -102,28 +112,7 @@ export const TaskBoard: React.FC = () => {
       load();
     }
     return () => controller.abort();
-  }, [workspaceId, projectId]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    if (workspaceId && projectId && !loading) {
-      const load = async () => {
-        try {
-          const tasksRes = await apiClient.get<PageResponse<Task>>(`/workspaces/${workspaceId}/projects/${projectId}/tasks`, {
-            params: { search: debouncedSearch, sort: 'position,asc' },
-            signal: controller.signal
-          });
-          setTasks(sortTasks(tasksRes.data.content));
-        } catch (err) {
-          if (controller.signal.aborted) return;
-          console.error(err);
-          toast.error('Failed to load tasks');
-        }
-      };
-      load();
-    }
-    return () => controller.abort();
-  }, [workspaceId, projectId, loading, debouncedSearch]);
+  }, [workspaceId, projectId, debouncedSearch]);
 
   const handleOpenCreate = () => {
     setEditingTask(null);
@@ -131,6 +120,7 @@ export const TaskBoard: React.FC = () => {
     setDescription('');
     setPriority('MEDIUM');
     setDeadline('');
+    setSelectedAssigneeId(user?.id || '');
     setShowModal(true);
   };
 
@@ -139,6 +129,7 @@ export const TaskBoard: React.FC = () => {
     setTitle(task.title);
     setDescription(task.description || '');
     setPriority(task.priority);
+    setSelectedAssigneeId(task.assigneeId || '');
     if (task.deadline) {
       setDeadline(formatLocalDateTimeForInput(task.deadline));
     } else {
@@ -161,7 +152,7 @@ export const TaskBoard: React.FC = () => {
         description,
         priority,
         deadline: deadline || null,
-        assigneeId: editingTask ? editingTask.assigneeId : user.id
+        assigneeId: selectedAssigneeId || (editingTask ? editingTask.assigneeId : user?.id)
       };
 
       if (editingTask) {
@@ -269,8 +260,31 @@ export const TaskBoard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-orange"></div>
+      <div className="space-y-6 max-w-full">
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-cf-border pb-4 gap-4">
+          <div>
+            <div className="h-4 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-6 w-64 bg-gray-200 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {STATUSES.map((s) => (
+            <div key={s} className="bg-cf-bgLight border border-cf-border rounded p-4 min-h-[60vh]">
+              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-4" />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white border border-cf-border rounded p-4 mb-4 shadow-cf-card">
+                  <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse mb-3" />
+                  <div className="h-3 w-full bg-gray-200 rounded animate-pulse mb-2" />
+                  <div className="h-3 w-2/3 bg-gray-200 rounded animate-pulse mb-4" />
+                  <div className="flex justify-between items-center border-t border-cf-border pt-3">
+                    <div className="h-3 w-14 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -281,9 +295,9 @@ export const TaskBoard: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-cf-border pb-4 gap-4">
         <div>
           <div className="flex items-center space-x-2 text-xs text-cf-textMuted uppercase font-semibold tracking-wider">
-            <Link to="/workspaces" className="hover:text-cf-orange transition">Workspaces</Link>
+            <Link to="/workspaces" className="hover:text-cf-primary transition">Workspaces</Link>
             <span>/</span>
-            <Link to={`/workspaces/${workspaceId}`} className="hover:text-cf-orange transition">Projects</Link>
+            <Link to={`/workspaces/${workspaceId}`} className="hover:text-cf-primary transition">Projects</Link>
             <span>/</span>
             <span className="text-cf-textDark">{project?.name}</span>
           </div>
@@ -305,15 +319,25 @@ export const TaskBoard: React.FC = () => {
             placeholder="Search tasks by title or description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-cf-border rounded-md text-sm focus:outline-none focus:border-cf-orange focus:ring-1 focus:ring-cf-orange transition"
+            className="w-full pl-9 pr-4 py-2 bg-white border border-cf-border rounded-md text-sm focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition"
           />
         </div>
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | 'ALL')}
+          className="px-3 py-2 bg-white border border-cf-border rounded-md text-sm text-cf-textDark focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition"
+        >
+          <option value="ALL">All Priorities</option>
+          {PRIORITIES.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
       </div>
 
       {/* Board Columns Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 overflow-x-auto pb-4">
         {STATUSES.map((status) => {
-          const statusTasks = tasks.filter(t => t.status === status);
+          const statusTasks = tasks.filter(t => t.status === status && (priorityFilter === 'ALL' || t.priority === priorityFilter));
           return (
             <div
               key={status}
@@ -342,7 +366,7 @@ export const TaskBoard: React.FC = () => {
                         <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition absolute right-2 top-2 bg-white pl-1 rounded">
                           <button
                             onClick={() => handleOpenEdit(task)}
-                            className="p-1 text-cf-textMuted hover:text-cf-orange transition"
+                            className="p-1 text-cf-textMuted hover:text-cf-primary transition"
                             aria-label={`Edit task ${task.title}`}
                           >
                             <Edit2 size={13} />
@@ -369,8 +393,10 @@ export const TaskBoard: React.FC = () => {
                         </span>
                         
                         <div className="flex items-center space-x-1 text-[10px] text-cf-textMuted">
-                          <User size={12} className="text-cf-orange" />
-                          <span className="text-[9px]">Assigned</span>
+                          <User size={12} className="text-cf-primary" />
+                          <span className="text-[9px] truncate max-w-[80px]" title={task.assigneeEmail || 'Unassigned'}>
+                            {task.assigneeEmail ? task.assigneeEmail.split('@')[0] : 'Unassigned'}
+                          </span>
                         </div>
                       </div>
 
@@ -422,7 +448,7 @@ export const TaskBoard: React.FC = () => {
           <Card className="w-full max-w-lg shadow-2xl" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             <CardHeader className="bg-cf-navy text-white">
               <h3 className="font-bold text-base">{editingTask ? 'Edit Task' : 'Add Task'}</h3>
-              <p className="text-[11px] text-gray-300">Fill in task parameters. Assignment is managed automatically.</p>
+              <p className="text-[11px] text-gray-300">Fill in task parameters and assign to a team member.</p>
             </CardHeader>
             <form onSubmit={handleSaveTask}>
               <CardBody className="space-y-4">
@@ -439,7 +465,7 @@ export const TaskBoard: React.FC = () => {
                     Description
                   </label>
                   <textarea
-                    className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-orange focus:ring-1 focus:ring-cf-orange transition duration-150"
+                    className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition duration-150"
                     placeholder="Describe tasks requirements or steps..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -455,7 +481,7 @@ export const TaskBoard: React.FC = () => {
                     <select
                       value={priority}
                       onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                      className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-orange focus:ring-1 focus:ring-cf-orange transition duration-150"
+                      className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition duration-150"
                     >
                       {PRIORITIES.map(p => (
                         <option key={p} value={p}>{p}</option>
@@ -471,9 +497,25 @@ export const TaskBoard: React.FC = () => {
                       type="datetime-local"
                       value={deadline}
                       onChange={(e) => setDeadline(e.target.value)}
-                      className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-orange focus:ring-1 focus:ring-cf-orange transition duration-150"
+                      className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition duration-150"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-cf-textMuted mb-1.5">
+                    Assignee
+                  </label>
+                  <select
+                    value={selectedAssigneeId}
+                    onChange={(e) => setSelectedAssigneeId(e.target.value)}
+                    className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition duration-150"
+                  >
+                    <option value="">Unassigned</option>
+                    {members.map((m) => (
+                      <option key={m.userId} value={m.userId}>{m.email}</option>
+                    ))}
+                  </select>
                 </div>
               </CardBody>
               <CardFooter className="flex items-center justify-end gap-3 bg-cf-bgLight/40">

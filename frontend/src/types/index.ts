@@ -34,6 +34,7 @@ export interface WorkspaceMember {
   userId: string;
   email: string;
   role: WorkspaceRole;
+  memberId?: string;
 }
 
 export type ProjectStatus = 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'ARCHIVED';
@@ -60,6 +61,7 @@ export interface Task {
   deadline: string | null;
   projectId: string;
   assigneeId: string | null;
+  assigneeEmail: string | null;
   position: number;
   createdAt: string;
   updatedAt: string;

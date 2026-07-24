@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
@@ -7,9 +8,9 @@ export default {
         // AgileTrack palette — Indigo/Slate SaaS, 60/30/10
         // 60% cf.bgLight (canvas)  30% cf.navy/textDark (structure+content)  10% cf.orange (accent)
         cf: {
-          orange: '#5B4FE9',        // Accent (10%): primary CTAs, active states, links, focus
-          orangeHover: '#4A3DD1',
-          orangeSoft: '#EEEDFC',    // tint for soft badges/backgrounds on light surfaces
+          primary: '#5B4FE9',        // Primary: CTAs, active states, links, focus
+          primaryHover: '#4A3DD1',
+          primarySoft: '#EEEDFC',    // tint for soft badges/backgrounds on light surfaces
           navy: '#161B2E',          // Structure (30%): sidebar, header, dark surfaces
           navyDark: '#0F1320',      // Active nav items, deepest structural surface
           navySoft: '#232A45',      // Hover state on navy surfaces
@@ -25,6 +26,10 @@ export default {
           warningBg: '#FDF3E1',
           info: '#5B4FE9',
           infoBg: '#EEEDFC',
+          // Backward compatibility aliases (deprecated)
+          orange: '#5B4FE9',
+          orangeHover: '#4A3DD1',
+          orangeSoft: '#EEEDFC',
         }
       },
       fontFamily: {

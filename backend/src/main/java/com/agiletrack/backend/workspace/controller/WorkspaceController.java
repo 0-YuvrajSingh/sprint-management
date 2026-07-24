@@ -85,4 +85,14 @@ public class WorkspaceController {
     ) {
         return ResponseEntity.ok(workspaceService.getMembers(id));
     }
+
+    @DeleteMapping("/{id}/members/{memberId}")
+    @Operation(summary = "Remove workspace member", description = "Removes a member from the workspace. Requires ADMIN or OWNER role.")
+    public ResponseEntity<Void> removeMember(
+            @PathVariable UUID id,
+            @PathVariable UUID memberId
+    ) {
+        workspaceService.removeMember(id, memberId);
+        return ResponseEntity.noContent().build();
+    }
 }

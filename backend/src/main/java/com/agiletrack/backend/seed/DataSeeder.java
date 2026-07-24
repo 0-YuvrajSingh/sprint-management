@@ -99,7 +99,6 @@ public class DataSeeder implements CommandLineRunner {
         createTask(backendProject, "Write integration tests", "Cover auth and workspace flows", TaskStatus.TODO, TaskPriority.HIGH, 3.0, teammate);
 
         log.info("Demo data seeded: 2 users, 1 workspace, 2 projects, 8 tasks");
-        log.info("Demo login email: demo@agiletrack.com (password in README)");
     }
 
     private void createTask(Project project, String title, String description,

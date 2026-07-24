@@ -1,8 +1,16 @@
-# AgileTrack
+﻿# AgileTrack
 
 [![Build & Test](https://github.com/0-YuvrajSingh/AgileTrack/actions/workflows/build.yml/badge.svg)](https://github.com/0-YuvrajSingh/AgileTrack/actions)
+[![Java 21](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot 3.3](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![PostgreSQL 15+](https://img.shields.io/badge/PostgreSQL-15%2B-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-AgileTrack is a high-performance Agile Management Portal that simplifies project tracking, task boards, and team workflows. It features a modern, responsive React frontend and a robust Spring Boot backend powered by PostgreSQL.
+AgileTrack is a full-stack Agile management portal for organizing workspaces, projects, and collaborative task boards. A responsive React interface is backed by a Spring Boot REST API and PostgreSQL, with JWT authentication, versioned database migrations, and a container-ready development workflow.
+
+[Explore the live app](https://agile-track-ivory.vercel.app) | [View API documentation](#swagger--openapi-docs) | [Run locally](#quick-start-with-docker-recommended)
 
 ---
 
@@ -16,25 +24,57 @@ AgileTrack is a high-performance Agile Management Portal that simplifies project
 
 ---
 
-## Key Features
-- **Workspaces & Projects**: Organize your work into distinct workspaces and projects.
-- **Interactive Task Board**: Drag-and-drop task status updates with custom task ordering.
-- **JWT-Based Authentication**: Secure sign-up, sign-in, and session management.
-- **Dockerized Environment**: Quick multi-container setup for local testing and deployment.
-- **Database Migrations**: Automatic and versioned schema management using Flyway.
+## Feature Highlights
+
+| Organize | Plan | Protect | Ship |
+|---|---|---|---|
+| Create distinct workspaces and projects to keep teams and initiatives separated. | Move tasks across the board with drag-and-drop status updates and persistent custom ordering. | Register and sign in through a stateless JWT flow; protected API routes enforce authenticated access. | Start the full frontend, API, and database stack with Docker Compose and keep schemas in sync with Flyway. |
+
+- **Task visibility at a glance**: Track title, description, assignee, priority, status, and board position in one workflow.
+- **Responsive workspace**: React, TypeScript, Tailwind CSS, and Lucide icons provide a clean interface across screen sizes.
+- **Production-minded API**: Centralized error handling, OpenAPI/Swagger docs, CORS controls, and health endpoints support reliable integrations and deployments.
 
 ---
 
-## Architecture
+## Architecture & Security
 
-The project is structured as a decoupled monorepo containing two main services and a database:
+AgileTrack is a decoupled monorepo: the browser app communicates only with the REST API, and the API owns authentication, authorization, business rules, and database access.
 
 ```mermaid
-graph TD
-    Client[Browser / React App] -->|Port 80/5173| Frontend[Frontend Nginx / Vite]
-    Frontend -->|Proxy /api/v1| Backend[Spring Boot Application]
-    Backend -->|Port 8080| DB[(PostgreSQL Database)]
+flowchart LR
+    User[User browser] -->|HTTPS| Web[React + TypeScript UI]
+    Web -->|/api/v1<br/>Bearer JWT| Edge[Nginx reverse proxy<br/>or Vite dev proxy]
+    Edge --> API[Spring Boot REST API]
+
+    subgraph Security[Security boundary]
+        API --> Filter[JWT authentication filter]
+        Filter --> Rules[Spring Security authorization rules]
+        Rules --> Services[Workspace / Project / Task services]
+    end
+
+    Services --> JPA[Spring Data JPA / Hibernate]
+    JPA --> DB[(PostgreSQL)]
+    Flyway[Flyway migrations] --> DB
+
+    Auth[Register / Login] -->|public endpoints| API
+    API -->|BCrypt password verification| Users[User accounts]
+    API -->|signed JWT issued after login| Web
+
+    classDef client fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e;
+    classDef service fill:#ecfdf5,stroke:#059669,color:#064e3b;
+    classDef data fill:#fff7ed,stroke:#ea580c,color:#7c2d12;
+    class User,Web,Edge client;
+    class API,Filter,Rules,Services,Auth service;
+    class JPA,DB,Flyway,Users data;
 ```
+
+### Security at a Glance
+
+- Passwords are hashed with BCrypt; plaintext passwords are never stored.
+- Login issues a signed JWT, and the JWT filter validates it before protected endpoints are reached.
+- The API is stateless, with Spring Security enforcing authentication and endpoint authorization.
+- CORS is restricted to configured frontend origins, while local development origins remain supported.
+- Flyway applies database migrations in versioned order, keeping environments consistent.
 
 ### Database Schema
 
@@ -87,12 +127,46 @@ erDiagram
 - **Database**: PostgreSQL (v15+).
 - **Hosting/Containers**: Docker & Docker Compose.
 
+### Project Structure
+
+```text
+AgileTrack/
+|-- frontend/                  # React + TypeScript single-page application
+|   `-- src/
+|       |-- components/         # Reusable UI and layout components
+|       |-- pages/              # Route-level views (dashboard, board, workspaces)
+|       |-- services/           # API client layer
+|       |-- context/            # Shared application state
+|       `-- types/              # TypeScript domain models
+|-- backend/                   # Spring Boot REST API
+|   `-- src/
+|       |-- main/java/com/agiletrack/backend/
+|       |   |-- auth/           # Registration and login
+|       |   |-- security/       # JWT services and authentication filter
+|       |   |-- workspace/      # Workspace domain
+|       |   |-- project/        # Project domain
+|       |   |-- task/           # Task board domain
+|       |   `-- common/         # Shared exceptions and API concerns
+|       `-- main/resources/     # Application config and Flyway migrations
+|-- screenshots/               # README product previews
+|-- docker-compose.yml          # Local multi-container orchestration
+`-- .env.example               # Environment-variable template
+```
+
+### Key Design Decisions
+
+- **Feature-oriented backend packages** keep each domain's controller, service, repository, and model close together as the API grows.
+- **A separate frontend and API** lets the UI evolve independently while retaining a clean, documented HTTP contract.
+- **Stateless JWT authentication** suits a browser SPA and avoids server-side session storage.
+- **Position-based task ordering** persists drag-and-drop ordering without coupling the board UI to a transient client state.
+- **Flyway migrations over ad-hoc schema changes** make local, test, and deployed databases reproducible.
+
 ---
 
 ## Getting Started
 
 ### Live Demo
-> Deployed at your-deployment-url — register an account or use the demo credentials below.
+> **Live deployment:** [agile-track-ivory.vercel.app](https://agile-track-ivory.vercel.app) - register an account or use the demo credentials below.
 
 | Role | Email | Password |
 |------|-------|----------|

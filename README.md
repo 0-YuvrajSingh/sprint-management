@@ -24,6 +24,12 @@ AgileTrack is a full-stack Agile management portal for organizing workspaces, pr
 
 ### Log In
 ![AgileTrack login page](screenshots/login.png)
+
+### Dashboard
+![AgileTrack system dashboard](screenshots/dashboard.png)
+
+### Workspace Projects
+![AgileTrack workspace projects](screenshots/workspace-projects.png)
 ---
 
 ## Feature Highlights

@@ -10,18 +10,20 @@
 
 AgileTrack is a full-stack Agile management portal for organizing workspaces, projects, and collaborative task boards. A responsive React interface is backed by a Spring Boot REST API and PostgreSQL, with JWT authentication, versioned database migrations, and a container-ready development workflow.
 
-[Explore the live app](https://agile-track-ivory.vercel.app) | [View API documentation](#swagger--openapi-docs) | [Run locally](#quick-start-with-docker-recommended)
+[Explore the live app](https://agile-track-ivory.vercel.app/login) | [View API documentation](#swagger--openapi-docs) | [Run locally](#quick-start-with-docker-recommended)
 
 ---
 
 ## Preview
 
-### Login Page
-![Login Page](screenshots/login.png)
+### Product Overview
+![AgileTrack product overview](screenshots/home.png)
 
-### Dashboard & Task Board
-![Dashboard & Workspace](screenshots/dashboard.png)
+### Create an Account
+![AgileTrack sign-up page](screenshots/signup.png)
 
+### Log In
+![AgileTrack login page](screenshots/login.png)
 ---
 
 ## Feature Highlights
@@ -166,7 +168,7 @@ AgileTrack/
 ## Getting Started
 
 ### Live Demo
-> **Live deployment:** [agile-track-ivory.vercel.app](https://agile-track-ivory.vercel.app) - register an account or use the demo credentials below.
+> **Live deployment:** [Open the login page](https://agile-track-ivory.vercel.app/login) (the root URL opens the dashboard directly) - register an account or use the demo credentials below.
 
 | Role | Email | Password |
 |------|-------|----------|

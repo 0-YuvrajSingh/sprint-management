@@ -1,63 +1,64 @@
-import type React from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { apiClient, getApiErrorMessage } from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import type { Workspace, WorkspaceMember, WorkspaceRole } from '../types';
+import type { WorkspaceRole } from '../types';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
-import { UserPlus, ArrowLeft, Trash2 } from 'lucide-react';
+import { Users, UserPlus, ShieldAlert, ShieldCheck, User as UserIcon, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-const ROLES: WorkspaceRole[] = ['ADMIN', 'MEMBER', 'VIEWER'];
+import { useWorkspace } from '../hooks/useWorkspaces';
+import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';
+import { workspaceService } from '../services/workspaceService';
+import { getApiErrorMessage } from '../api/axios';
 
-export const WorkspaceMembers: React.FC = () => {
+const ROLE_COLORS: Record<WorkspaceRole, { bg: string, text: string, icon: React.ReactNode }> = {
+  OWNER: { bg: 'bg-purple-100', text: 'text-purple-700', icon: <ShieldAlert size={12} /> },
+  ADMIN: { bg: 'bg-blue-100', text: 'text-blue-700', icon: <ShieldCheck size={12} /> },
+  MEMBER: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: <UserIcon size={12} /> },
+  VIEWER: { bg: 'bg-gray-100', text: 'text-gray-700', icon: <UserIcon size={12} /> }
+};
+
+const WorkspaceMembers: React.FC = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { user } = useAuth();
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [members, setMembers] = useState<WorkspaceMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  const { workspace, loading: wsLoading, error: wsError } = useWorkspace(workspaceId);
+  const { members, loading: memLoading, error: memError, refetch: fetchMembers } = useWorkspaceMembers(workspaceId);
+
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<WorkspaceRole>('MEMBER');
   const [inviting, setInviting] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; memberId: string | null }>({ isOpen: false, memberId: null });
 
-  const fetchData = useCallback(async () => {
-    if (!workspaceId) return;
-    try {
-      const [wsRes, membersRes] = await Promise.all([
-        apiClient.get<Workspace>(`/workspaces/${workspaceId}`),
-        apiClient.get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`)
-      ]);
-      setWorkspace(wsRes.data);
-      setMembers(membersRes.data);
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to load workspace members');
-    } finally {
-      setLoading(false);
-    }
-  }, [workspaceId]);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; memberId: string | null; email: string }>({ 
+    isOpen: false, memberId: null, email: '' 
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const loading = wsLoading || memLoading;
+  const error = wsError || memError;
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+    if (!inviteEmail.trim() || !workspaceId) return;
+
     setInviting(true);
     try {
-      await apiClient.post(`/workspaces/${workspaceId}/members`, { email: inviteEmail, role: inviteRole });
+      await workspaceService.inviteMember(workspaceId, inviteEmail, inviteRole);
       toast.success('Member invited successfully!');
       setInviteEmail('');
       setShowInvite(false);
-      await fetchData();
-    } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err, 'Failed to invite member.'));
+      fetchMembers();
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        toast.error('Membership was modified. Refreshing...');
+        fetchMembers();
+      } else {
+        toast.error(getApiErrorMessage(err, 'Failed to invite member'));
+      }
     } finally {
       setInviting(false);
     }
@@ -65,154 +66,180 @@ export const WorkspaceMembers: React.FC = () => {
 
   const executeRemove = async () => {
     if (!deleteDialog.memberId || !workspaceId) return;
+
     try {
-      await apiClient.delete(`/workspaces/${workspaceId}/members/${deleteDialog.memberId}`);
+      await workspaceService.removeMember(workspaceId, deleteDialog.memberId);
       toast.success('Member removed successfully');
-      await fetchData();
-    } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err, 'Failed to remove member.'));
+      fetchMembers();
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        toast.error('Membership was modified. Refreshing...');
+        fetchMembers();
+      } else {
+        toast.error(getApiErrorMessage(err, 'Failed to remove member'));
+      }
     } finally {
-      setDeleteDialog({ isOpen: false, memberId: null });
+      setDeleteDialog({ isOpen: false, memberId: null, email: '' });
     }
   };
 
-  const canManage = workspace?.myRole === 'OWNER' || workspace?.myRole === 'ADMIN';
-
-  const getRoleBadgeColor = (role: WorkspaceRole) => {
-    switch (role) {
-      case 'OWNER': return 'bg-status-warningBg text-status-warning border-status-warning/20';
-      case 'ADMIN': return 'bg-status-infoBg text-status-info border-status-info/20';
-      case 'MEMBER': return 'bg-status-successBg text-status-success border-status-success/20';
-      case 'VIEWER': return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
-
-  if (loading) {
+  if (loading && !workspace) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary" />
+      <div className="flex flex-col items-center justify-center h-64 text-cf-textMuted">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary mb-4"></div>
+        <p>Loading members...</p>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <EmptyState
+          icon={Users}
+          title="Could not load team"
+          description={error}
+          actionLabel="Try Again"
+          onAction={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
+
+  const canManageMembers = workspace?.myRole === 'OWNER' || workspace?.myRole === 'ADMIN';
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-cf-border pb-4 gap-4">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cf-border pb-4">
         <div>
-          <div className="flex items-center space-x-2 text-xs text-cf-textMuted uppercase font-semibold tracking-wider mb-1">
-            <Link to="/workspaces" className="hover:text-cf-primary transition">Workspaces</Link>
-            <span>/</span>
-            <Link to={`/workspaces/${workspaceId}`} className="hover:text-cf-primary transition">{workspace?.name}</Link>
-            <span>/</span>
-            <span className="text-cf-textDark">Members</span>
+          <div className="flex items-center text-xs text-cf-textMuted mb-1 font-semibold tracking-wide uppercase">
+            <Link to={`/workspaces/${workspaceId}`} className="hover:text-cf-primary transition-colors flex items-center gap-1">
+              <ArrowLeft size={12} /> Back to Workspace
+            </Link>
           </div>
-          <h1 className="text-xl font-bold text-cf-textDark">Workspace Members</h1>
-          <p className="text-xs text-cf-textMuted mt-1">{members.length} member{members.length === 1 ? '' : 's'}</p>
+          <h1 className="text-2xl font-bold text-cf-textDark flex items-center gap-2">
+            Team Members
+          </h1>
+          <p className="text-sm text-cf-textMuted mt-1">
+            Manage who has access to {workspace?.name}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Link to={`/workspaces/${workspaceId}`}>
-            <Button variant="secondary" size="sm">
-              <ArrowLeft size={14} className="mr-1" /> Back
-            </Button>
-          </Link>
-          {canManage && (
-            <Button onClick={() => setShowInvite(true)} size="sm">
-              <UserPlus size={14} className="mr-1" /> Invite Member
-            </Button>
-          )}
-        </div>
+
+        {canManageMembers && (
+          <Button onClick={() => setShowInvite(!showInvite)} size="sm">
+            <UserPlus size={16} className="mr-1.5" /> 
+            {showInvite ? 'Cancel Invite' : 'Invite Member'}
+          </Button>
+        )}
       </div>
 
-      <Card>
-        <div className="divide-y divide-cf-border">
-          {members.map((member) => (
-            <div key={member.userId} className="flex items-center justify-between p-4 hover:bg-cf-bgLight/50 transition">
-              <div className="flex items-center gap-4">
-                <div className="w-9 h-9 bg-cf-primary/10 text-cf-primary rounded-full flex items-center justify-center text-xs font-bold uppercase">
-                  {member.email.slice(0, 2)}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-cf-textDark">{member.email}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border font-mono ${getRoleBadgeColor(member.role)}`}>
-                      {member.role}
-                    </span>
-                    {member.userId === user?.id && (
-                      <span className="text-[9px] text-cf-textMuted">(You)</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {canManage && member.role !== 'OWNER' && (
-                <button
-                  onClick={() => setDeleteDialog({ isOpen: true, memberId: member.memberId || member.userId })}
-                  className="p-2 text-cf-textMuted hover:text-red-600 hover:bg-red-50 rounded transition"
-                  aria-label={`Remove ${member.email}`}
-                >
-                  <Trash2 size={15} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {showInvite && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cf-navy/60 backdrop-blur-sm"
-          onClick={() => setShowInvite(false)}
-        >
-          <Card className="w-full max-w-md shadow-2xl" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-            <CardHeader className="bg-cf-navy text-white">
-              <h3 className="font-bold text-base">Invite Member</h3>
-              <p className="text-[11px] text-gray-300">Add a user to this workspace by email</p>
-            </CardHeader>
-            <form onSubmit={handleInvite}>
-              <CardBody className="space-y-4">
+      {/* Invite Form */}
+      {showInvite && canManageMembers && (
+        <Card className="bg-blue-50/50 border-blue-100">
+          <CardBody>
+            <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3 items-end">
+              <div className="flex-1 w-full">
                 <Input
-                  label="Email address"
+                  label="User Email"
                   type="email"
-                  placeholder="colleague@company.com"
+                  placeholder="colleague@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   required
                 />
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-cf-textMuted mb-1.5">
-                    Role
-                  </label>
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as WorkspaceRole)}
-                    className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
-              </CardBody>
-              <div className="px-5 py-4 border-t border-cf-border bg-cf-bgLight/40 flex items-center justify-end gap-3">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setShowInvite(false)} disabled={inviting}>
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" disabled={inviting}>
-                  {inviting ? 'Inviting...' : 'Send Invite'}
-                </Button>
               </div>
+              <div className="w-full sm:w-48">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-cf-textMuted mb-1.5">
+                  Role
+                </label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as WorkspaceRole)}
+                  className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition duration-150"
+                >
+                  <option value="ADMIN">Admin</option>
+                  <option value="MEMBER">Member</option>
+                  <option value="VIEWER">Viewer</option>
+                </select>
+              </div>
+              <Button type="submit" disabled={inviting} className="w-full sm:w-auto h-[38px]">
+                {inviting ? 'Inviting...' : 'Send Invite'}
+              </Button>
             </form>
-          </Card>
-        </div>
+          </CardBody>
+        </Card>
       )}
+
+      {/* Members List */}
+      <Card>
+        <CardHeader className="border-b border-cf-border bg-cf-bgLight/30">
+          <h3 className="font-bold text-cf-textDark flex items-center gap-2">
+            <Users size={18} className="text-cf-primary" />
+            Active Members ({members.length})
+          </h3>
+        </CardHeader>
+        <div className="divide-y divide-cf-border">
+          {members.map(member => {
+            const isMe = member.userId === user?.id;
+            const roleConfig = ROLE_COLORS[member.role];
+            
+            // Only OWNER can remove other OWNERs. ADMINs can remove MEMBERs and VIEWERs.
+            const canRemove = !isMe && canManageMembers && (
+              workspace?.myRole === 'OWNER' || 
+              (workspace?.myRole === 'ADMIN' && member.role !== 'OWNER' && member.role !== 'ADMIN')
+            );
+
+            return (
+              <div key={member.userId} className="p-4 flex items-center justify-between hover:bg-cf-bgLight/30 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-cf-primary/10 flex items-center justify-center text-cf-primary font-bold shadow-inner">
+                    {member.email.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm text-cf-textDark">{member.email}</p>
+                      {isMe && (
+                        <span className="text-[9px] uppercase font-bold tracking-wider bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                          You
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${roleConfig.bg} ${roleConfig.text}`}>
+                    {roleConfig.icon}
+                    {member.role}
+                  </div>
+
+                  {canRemove ? (
+                    <button
+                      onClick={() => setDeleteDialog({ isOpen: true, memberId: member.userId, email: member.email })}
+                      className="text-cf-textMuted hover:text-red-500 p-2 rounded hover:bg-red-50 transition-colors"
+                      title="Remove Member"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  ) : (
+                    <div className="w-8"></div> /* Spacer for alignment */
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
 
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
         title="Remove Member"
-        message="Are you sure you want to remove this member from the workspace? They will lose access to all projects and tasks."
-        confirmLabel="Remove"
-        isDestructive
+        message={`Are you sure you want to remove ${deleteDialog.email} from the workspace? They will lose access to all projects and tasks.`}
+        confirmLabel="Remove Member"
+        isDestructive={true}
         onConfirm={executeRemove}
-        onCancel={() => setDeleteDialog({ isOpen: false, memberId: null })}
+        onCancel={() => setDeleteDialog({ isOpen: false, memberId: null, email: '' })}
       />
     </div>
   );

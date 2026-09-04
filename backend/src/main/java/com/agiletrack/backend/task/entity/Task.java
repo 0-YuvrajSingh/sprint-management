@@ -68,4 +68,19 @@ public class Task extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private Double position = 0.0;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
+    public boolean canTransitionTo(TaskStatus target) {
+        if (this.status == target) return true;
+        
+        return switch (this.status) {
+            case TODO -> target == TaskStatus.IN_PROGRESS;
+            case IN_PROGRESS -> target == TaskStatus.TODO || target == TaskStatus.IN_REVIEW;
+            case IN_REVIEW -> target == TaskStatus.IN_PROGRESS || target == TaskStatus.DONE;
+            case DONE -> target == TaskStatus.IN_PROGRESS; // explicitly deciding it can go back to IN_PROGRESS
+        };
+    }
 }

@@ -66,3 +66,14 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
 }
+
+export type ActivityType = 'CREATED' | 'ASSIGNED' | 'STATUS_CHANGED' | 'PRIORITY_CHANGED' | 'COMPLETED';
+
+export interface TaskActivityResponse {
+  id: string;
+  userId: string;
+  userEmail: string;
+  type: ActivityType;
+  details: string | null;
+  createdAt: string;
+}

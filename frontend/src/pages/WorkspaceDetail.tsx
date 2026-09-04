@@ -1,296 +1,301 @@
-import type React from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { apiClient, getApiErrorMessage } from '../api/axios';
-import type { PageResponse, Project, Workspace, ProjectStatus } from '../types';
+import type { Project, ProjectStatus } from '../types';
 import { Card, CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Pagination } from '../components/ui/Pagination';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
-import { FolderPlus, Calendar, ArrowRight, Trash2, Search, Users } from 'lucide-react';
+import { FolderPlus, Settings, LayoutDashboard, Search, Trash2, ShieldAlert } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-const PROJECT_STATUSES: ProjectStatus[] = ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
+import { useWorkspace } from '../hooks/useWorkspaces';
+import { projectService } from '../services/projectService';
+import { getApiErrorMessage } from '../api/axios';
 
-export const WorkspaceDetail: React.FC = () => {
+const STATUS_COLORS: Record<ProjectStatus, string> = {
+  PLANNING: 'bg-blue-100 text-blue-800 border-blue-200',
+  ACTIVE: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  ON_HOLD: 'bg-amber-100 text-amber-800 border-amber-200',
+  COMPLETED: 'bg-purple-100 text-purple-800 border-purple-200',
+  ARCHIVED: 'bg-gray-100 text-gray-800 border-gray-200'
+};
+
+const WorkspaceDetail: React.FC = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  
+  const { workspace, loading: wsLoading, error: wsError } = useWorkspace(workspaceId);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [search, setSearch] = useState('');
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
 
-  // Escape key handler
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowCreateModal(false);
-      }
-    };
-    if (showCreateModal) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showCreateModal]);
-
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(0);
+      setDebouncedSearch(searchQuery);
+      setPage(0); // Reset to first page on new search
     }, 400);
     return () => clearTimeout(handler);
-  }, [search]);
+  }, [searchQuery]);
 
-  const fetchData = useCallback(async (signal?: AbortSignal) => {
+  const fetchProjects = useCallback(async (signal?: AbortSignal) => {
+    if (!workspaceId) return;
     try {
-      const [wsRes, projsRes] = await Promise.all([
-        apiClient.get<Workspace>(`/workspaces/${workspaceId}`, { signal }),
-        apiClient.get<PageResponse<Project>>(`/workspaces/${workspaceId}/projects`, {
-          params: { page, size: 9, search: debouncedSearch },
-          signal
-        })
-      ]);
-      setWorkspace(wsRes.data);
-      setProjects(projsRes.data.content);
-      setTotalPages(projsRes.data.totalPages);
-    } catch (err) {
-      if (signal?.aborted) return;
-      console.error(err);
-      toast.error('Failed to load workspace detail or projects list');
+      setLoading(true);
+      setError(null);
+      const data = await projectService.list(workspaceId, debouncedSearch, page, 9, signal);
+      setProjects(data.content);
+      setTotalPages(data.totalPages);
+    } catch (e: any) {
+      if (e?.name !== 'CanceledError') {
+        setError(getApiErrorMessage(e, 'Failed to load projects'));
+      }
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, page, debouncedSearch]);
+  }, [workspaceId, debouncedSearch, page]);
 
   useEffect(() => {
     const controller = new AbortController();
-    if (workspaceId) {
-      fetchData(controller.signal);
-    }
+    fetchProjects(controller.signal);
     return () => controller.abort();
-  }, [workspaceId, fetchData]);
+  }, [fetchProjects]);
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !workspaceId) return;
 
     setCreating(true);
     try {
-      await apiClient.post<Project>(`/workspaces/${workspaceId}/projects`, {
-        name,
-        description
-      });
+      await projectService.create(workspaceId, { name, description });
       toast.success('Project created successfully!');
-      await fetchData();
+      fetchProjects();
       setShowCreateModal(false);
       setName('');
       setDescription('');
     } catch (err: unknown) {
-      console.error(err);
-      toast.error(getApiErrorMessage(err, 'Failed to create project.'));
+      toast.error(getApiErrorMessage(err, 'Failed to create project'));
     } finally {
       setCreating(false);
     }
   };
 
   const executeDeleteProject = async () => {
-    if (!deleteDialog.id) return;
+    if (!deleteDialog.id || !workspaceId) return;
 
     try {
-      await apiClient.delete(`/workspaces/${workspaceId}/projects/${deleteDialog.id}`);
+      await projectService.remove(workspaceId, deleteDialog.id);
       toast.success('Project deleted successfully');
       if (projects.length === 1 && page > 0) {
         setPage(page - 1);
       } else {
-        await fetchData();
+        fetchProjects();
       }
-    } catch (err: unknown) {
-      console.error(err);
-      toast.error(getApiErrorMessage(err, 'Failed to delete project.'));
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        toast.error('Project was modified by another user. Refreshing...');
+        fetchProjects();
+      } else {
+        toast.error(getApiErrorMessage(err, 'Failed to delete project'));
+      }
     } finally {
       setDeleteDialog({ isOpen: false, id: null });
     }
   };
 
   const handleStatusChange = async (projectId: string, newStatus: ProjectStatus) => {
+    if (!workspaceId) return;
     try {
-      await apiClient.patch(`/workspaces/${workspaceId}/projects/${projectId}/status`, { status: newStatus });
-      await fetchData();
+      await projectService.updateStatus(workspaceId, projectId, newStatus);
       toast.success(`Project status updated to ${newStatus}`);
-    } catch (err: unknown) {
-      console.error(err);
-      toast.error(getApiErrorMessage(err, 'Failed to update project status.'));
+      fetchProjects();
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        toast.error('Project was modified by another user. Refreshing...');
+        fetchProjects();
+      } else {
+        toast.error(getApiErrorMessage(err, 'Failed to update project status'));
+      }
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE': return 'bg-status-successBg text-status-success border-status-success/20';
-      case 'PLANNING': return 'bg-status-infoBg text-status-info border-status-info/20';
-      case 'ON_HOLD': return 'bg-status-warningBg text-status-warning border-status-warning/20';
-      case 'COMPLETED': return 'bg-gray-100 text-gray-700 border-gray-200';
-      case 'ARCHIVED': return 'bg-gray-100 text-gray-500 border-gray-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
 
-  if (loading) {
+  if (wsLoading && !workspace) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary"></div>
+      <div className="flex flex-col items-center justify-center h-64 text-cf-textMuted">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary mb-4"></div>
+        <p>Loading workspace...</p>
+      </div>
+    );
+  }
+
+  if (wsError || error) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <EmptyState
+          icon={FolderPlus}
+          title="Could not load workspace"
+          description={wsError || error || 'Unknown error'}
+          actionLabel="Try Again"
+          onAction={() => window.location.reload()}
+        />
       </div>
     );
   }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-cf-border pb-4 gap-4">
+      {/* Header section ... */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cf-border pb-4">
         <div>
-          <div className="flex items-center space-x-2 text-xs text-cf-textMuted uppercase font-semibold tracking-wider">
-            <Link to="/workspaces" className="hover:text-cf-primary transition">Workspaces</Link>
-            <span>/</span>
-            <span className="text-cf-textDark">{workspace?.name}</span>
-          </div>
-          <h1 className="text-xl font-bold text-cf-textDark mt-1">{workspace?.name} Projects</h1>
-          <p className="text-xs text-cf-textMuted mt-1">Manage project pipelines inside this workspace</p>
+          <h1 className="text-2xl font-bold text-cf-textDark flex items-center gap-2">
+            {workspace?.name}
+            {workspace?.myRole === 'VIEWER' && (
+              <span className="flex items-center gap-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-mono uppercase tracking-wider">
+                <ShieldAlert size={12} /> Read-Only
+              </span>
+            )}
+          </h1>
+          <p className="text-sm text-cf-textMuted mt-1">{workspace?.description}</p>
         </div>
-
-        <div className="flex gap-2">
-          {workspace?.myRole !== 'VIEWER' && (
-            <Button onClick={() => setShowCreateModal(true)} size="sm" className="text-xs font-semibold">
-              <FolderPlus size={14} className="mr-1.5" /> New Project
-            </Button>
-          )}
+        
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-cf-textMuted" size={14} />
+            <input
+              type="text"
+              placeholder="Search projects..."
+              className="w-full pl-9 pr-3 py-1.5 text-sm bg-white border border-cf-border rounded-full focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
           <Link to={`/workspaces/${workspaceId}/members`}>
-            <Button variant="secondary" size="sm" className="text-xs font-semibold">
-              <Users size={14} className="mr-1.5" /> Members
+            <Button variant="secondary" size="sm" className="w-full sm:w-auto shadow-sm whitespace-nowrap">
+              <Settings size={16} className="mr-1.5" /> Manage Team
             </Button>
           </Link>
+
+          {workspace?.myRole !== 'VIEWER' && (
+            <Button onClick={() => setShowCreateModal(true)} size="sm" className="w-full sm:w-auto shadow-sm whitespace-nowrap">
+              <FolderPlus size={16} className="mr-1.5" /> New Project
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-cf-textMuted" size={16} />
-          <input
-            type="text"
-            placeholder="Search projects..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-cf-border rounded-md text-sm focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition"
-          />
+      {loading && projects.length === 0 ? (
+        <div className="flex justify-center p-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cf-primary"></div>
         </div>
-      </div>
-
-      {/* Projects list */}
-      {projects.length === 0 ? (
-        <Card className="text-center py-12">
-          <CardBody className="space-y-4">
-            <p className="text-sm text-cf-textMuted font-sans">No projects found in this workspace.</p>
-            {workspace?.myRole !== 'VIEWER' && (
-              <Button onClick={() => setShowCreateModal(true)} size="sm">
-                Create your first Project
-              </Button>
-            )}
-          </CardBody>
-        </Card>
+      ) : projects.length === 0 ? (
+        <EmptyState 
+          icon={LayoutDashboard}
+          title={debouncedSearch ? "No projects match your search" : "No projects yet"}
+          description={debouncedSearch ? "Try adjusting your search terms." : "Create your first project to start tracking tasks."}
+          actionLabel={debouncedSearch ? "Clear Search" : (workspace?.myRole !== 'VIEWER' ? "Create Project" : undefined)}
+          onAction={debouncedSearch ? () => setSearchQuery('') : (workspace?.myRole !== 'VIEWER' ? () => setShowCreateModal(true) : undefined)}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {projects.map((proj) => (
-            <Card key={proj.id} hoverable className="flex flex-col h-full border border-cf-border">
-              <CardHeader className="bg-cf-bgLight flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-cf-textDark truncate max-w-[180px]">{proj.name}</h3>
-                  {workspace?.myRole !== 'VIEWER' ? (
-                    <select
-                      value={proj.status}
-                      onChange={(e) => handleStatusChange(proj.id, e.target.value as ProjectStatus)}
-                      className={`text-[9px] uppercase px-1.5 py-0.5 rounded border mt-1.5 font-mono cursor-pointer focus:outline-none ${getStatusColor(proj.status)}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {PROJECT_STATUSES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border mt-1.5 inline-block font-mono ${getStatusColor(proj.status)}`}>
-                      {proj.status}
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map((project) => (
+              <Card key={project.id} hoverable className="flex flex-col h-full border border-cf-border relative overflow-hidden group">
+                <CardBody className="flex-1 pb-4">
+                  <div className="flex justify-between items-start mb-3 gap-2">
+                    <h3 className="font-bold text-lg text-cf-textDark leading-tight line-clamp-1 flex-1">
+                      {project.name}
+                    </h3>
+                    {workspace?.myRole !== 'VIEWER' && project.status !== 'ARCHIVED' && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setDeleteDialog({ isOpen: true, id: project.id });
+                        }}
+                        className="text-cf-textMuted hover:text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Delete project"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-sm text-cf-textMuted line-clamp-2 mb-4">
+                    {project.description || <span className="italic opacity-60">No description provided.</span>}
+                  </p>
+
+                  <div className="mt-auto pt-4 border-t border-cf-border/60">
+                    <div className="flex justify-between items-center">
+                      {workspace?.myRole !== 'VIEWER' ? (
+                        <select
+                          value={project.status}
+                          onChange={(e) => handleStatusChange(project.id, e.target.value as ProjectStatus)}
+                          className={`text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded border focus:outline-none focus:ring-1 focus:ring-cf-primary transition-colors cursor-pointer ${STATUS_COLORS[project.status]}`}
+                        >
+                          {(Object.keys(STATUS_COLORS) as ProjectStatus[]).map(status => (
+                            <option key={status} value={status}>{status.replace('_', ' ')}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded border ${STATUS_COLORS[project.status]}`}>
+                          {project.status.replace('_', ' ')}
+                        </span>
+                      )}
+                      
+                      <span className="text-[10px] text-cf-textMuted">
+                        Updated {new Date(project.updatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </CardBody>
+                
+                <Link to={`/workspaces/${workspaceId}/projects/${project.id}`} className="block">
+                  <div className="bg-cf-bgLight/40 hover:bg-blue-50/50 p-3 text-center border-t border-cf-border transition-colors">
+                    <span className="text-sm font-semibold text-cf-primary flex items-center justify-center gap-1.5">
+                      <LayoutDashboard size={16} /> Open Board
                     </span>
-                  )}
-                </div>
-                {workspace?.myRole !== 'VIEWER' && (
-                  <button
-                    onClick={() => setDeleteDialog({ isOpen: true, id: proj.id })}
-                    className="text-cf-textMuted hover:text-red-600 transition p-1 hover:bg-white rounded"
-                    aria-label={`Delete project ${proj.name}`}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                )}
-              </CardHeader>
-              <CardBody className="flex-grow">
-                <p className="text-xs text-cf-textMuted line-clamp-3 leading-relaxed">
-                  {proj.description || 'No description provided for this project.'}
-                </p>
-              </CardBody>
-              <CardFooter className="flex justify-between items-center bg-cf-bgLight/40">
-                <span className="text-[10px] text-cf-textMuted flex items-center gap-1">
-                  <Calendar size={12} />
-                  <span>{new Date(proj.createdAt).toLocaleDateString()}</span>
-                </span>
-                <Link to={`/workspaces/${workspaceId}/projects/${proj.id}`}>
-                  <Button size="sm" className="text-xs font-semibold flex items-center gap-1">
-                    <span>Task Board</span>
-                    <ArrowRight size={12} />
-                  </Button>
+                  </div>
                 </Link>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-8 flex justify-center">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </>
       )}
 
-      {projects.length > 0 && (
-        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
-      )}
-
-      <ConfirmDialog
-        isOpen={deleteDialog.isOpen}
-        title="Delete Project"
-        message="Are you sure you want to delete this project and all its tasks? This action is irreversible."
-        confirmLabel="Delete Project"
-        isDestructive={true}
-        onConfirm={executeDeleteProject}
-        onCancel={() => setDeleteDialog({ isOpen: false, id: null })}
-      />
-
-      {/* Create Project Modal */}
-      {showCreateModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cf-navy/60 backdrop-blur-sm"
-          onClick={() => setShowCreateModal(false)}
-        >
-          <Card className="w-full max-w-md shadow-2xl" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+      {/* Modals and Dialogs */}
+      {showCreateModal && workspace?.myRole !== 'VIEWER' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cf-navy/60 backdrop-blur-sm">
+          <Card className="w-full max-w-md shadow-2xl">
             <CardHeader className="bg-cf-navy text-white">
-              <h3 className="font-bold text-base">New Project</h3>
-              <p className="text-[11px] text-gray-300">Create a task container in this workspace</p>
+              <h3 className="font-bold text-lg">Create New Project</h3>
+              <p className="text-xs text-gray-300">Set up a new board for your team.</p>
             </CardHeader>
             <form onSubmit={handleCreateProject}>
               <CardBody className="space-y-4">
                 <Input
                   label="Project Name"
-                  placeholder="e.g. API Integration Phase 1"
+                  placeholder="e.g. Website Redesign"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -301,28 +306,23 @@ export const WorkspaceDetail: React.FC = () => {
                   </label>
                   <textarea
                     className="w-full px-3 py-2 text-sm text-cf-textDark bg-white border border-cf-border rounded focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition duration-150"
-                    placeholder="Brief description of project goals..."
+                    placeholder="Briefly describe the goal..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
                   />
                 </div>
               </CardBody>
-              <CardFooter className="flex items-center justify-end gap-3">
+              <CardFooter className="flex items-center justify-end gap-3 bg-cf-bgLight/40">
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setName('');
-                    setDescription('');
-                  }}
+                  onClick={() => setShowCreateModal(false)}
                   disabled={creating}
                 >
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" disabled={creating}>
+                <Button type="submit" disabled={creating}>
                   {creating ? 'Creating...' : 'Create Project'}
                 </Button>
               </CardFooter>
@@ -330,6 +330,16 @@ export const WorkspaceDetail: React.FC = () => {
           </Card>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        title="Delete Project"
+        message="Are you sure you want to delete this project? All associated tasks will be permanently removed."
+        confirmLabel="Delete Project"
+        isDestructive={true}
+        onConfirm={executeDeleteProject}
+        onCancel={() => setDeleteDialog({ isOpen: false, id: null })}
+      />
     </div>
   );
 };

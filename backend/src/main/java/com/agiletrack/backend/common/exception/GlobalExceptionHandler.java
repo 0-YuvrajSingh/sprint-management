@@ -109,6 +109,13 @@ public class GlobalExceptionHandler {
                 return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
         }
 
+        @ExceptionHandler(BusinessRuleException.class)
+        public ResponseEntity<ErrorResponse> handleBusinessRuleException(
+                        BusinessRuleException ex,
+                        HttpServletRequest request) {
+                return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+        }
+
         @ExceptionHandler(IllegalStateException.class)
         public ResponseEntity<ErrorResponse> handleIllegalState(
                         IllegalStateException ex,

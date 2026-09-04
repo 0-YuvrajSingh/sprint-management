@@ -1,445 +1,388 @@
-import type React from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { apiClient, getApiErrorMessage } from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import type { PageResponse, Project, Task, TaskPriority, TaskStatus, Workspace, WorkspaceMember } from '../types';
+import type { Task, TaskPriority, TaskStatus } from '../types';
 import { Card, CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
-import { Plus, User, ArrowLeftRight, Trash2, Edit2, Calendar, Search } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Search, Plus, Calendar, Loader2, ArrowRight, ArrowLeftRight, User } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+
+import { useWorkspace } from '../hooks/useWorkspaces';
+import { useProject } from '../hooks/useProjects';
+import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';
+import { useTasks } from '../hooks/useTasks';
+import { taskService } from '../services/taskService';
+import { getApiErrorMessage } from '../api/axios';
 
 const STATUSES: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
 const PRIORITIES: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
 
-const sortTasks = (items: Task[]) => {
-  return [...items].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+const getStatusColor = (status: TaskStatus) => {
+  switch (status) {
+    case 'TODO': return 'bg-gray-100 text-gray-700 border-gray-300';
+    case 'IN_PROGRESS': return 'bg-blue-50 text-cf-primary border-blue-200';
+    case 'IN_REVIEW': return 'bg-amber-50 text-amber-600 border-amber-200';
+    case 'DONE': return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+  }
 };
 
-const formatLocalDateTimeForInput = (value: string) => value.slice(0, 16);
+const getPriorityBadge = (priority: TaskPriority) => {
+  switch (priority) {
+    case 'LOW': return 'bg-gray-100 text-gray-600 border-gray-200';
+    case 'MEDIUM': return 'bg-blue-50 text-blue-600 border-blue-200';
+    case 'HIGH': return 'bg-orange-50 text-orange-600 border-orange-200';
+    case 'URGENT': return 'bg-red-50 text-red-600 border-red-200';
+  }
+};
 
-export const TaskBoard: React.FC = () => {
+const TaskBoard: React.FC = () => {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const { user } = useAuth();
   
-  const [project, setProject] = useState<Project | null>(null);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [members, setMembers] = useState<WorkspaceMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  // Custom hooks for data fetching
+  const { workspace, loading: wsLoading, error: wsError } = useWorkspace(workspaceId);
+  const { project, loading: projLoading, error: projError } = useProject(workspaceId, projectId);
+  const { members, loading: memLoading } = useWorkspaceMembers(workspaceId);
+  const { tasks, setTasks, loading: tasksLoading, error: tasksError, refetch: refetchTasks } = useTasks(workspaceId, projectId);
+
+  const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'ALL'>('ALL');
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [search]);
-
-  // Create/Edit Modal State
+  // Modals & State
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  
+  // Form fields
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [deadline, setDeadline] = useState('');
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>('');
+  
   const [saving, setSaving] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
 
-  // Escape key handler
+  // Debounce search
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowModal(false);
-      }
-    };
-    if (showModal) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showModal]);
-
-  // Drag state
-  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-
-  const fetchTasks = useCallback(async () => {
-    if (!workspaceId || !projectId) {
-      return;
-    }
-
-    try {
-      const tasksRes = await apiClient.get<PageResponse<Task>>(`/workspaces/${workspaceId}/projects/${projectId}/tasks`, {
-        params: { search: debouncedSearch, sort: 'position,asc' }
-      });
-      setTasks(sortTasks(tasksRes.data.content));
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to load tasks');
-    }
-  }, [workspaceId, projectId, debouncedSearch]);
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    if (workspaceId && projectId) {
-      const load = async () => {
-        try {
-          const [wsRes, projectRes, tasksRes, membersRes] = await Promise.all([
-            apiClient.get<Workspace>(`/workspaces/${workspaceId}`, { signal: controller.signal }),
-            apiClient.get<Project>(`/workspaces/${workspaceId}/projects/${projectId}`, { signal: controller.signal }),
-            apiClient.get<PageResponse<Task>>(`/workspaces/${workspaceId}/projects/${projectId}/tasks`, {
-              params: { search: debouncedSearch, sort: 'position,asc' },
-              signal: controller.signal
-            }),
-            apiClient.get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`, { signal: controller.signal })
-          ]);
-          setWorkspace(wsRes.data);
-          setProject(projectRes.data);
-          setTasks(sortTasks(tasksRes.data.content));
-          setMembers(membersRes.data);
-        } catch (err) {
-          if (controller.signal.aborted) return;
-          console.error(err);
-          toast.error('Failed to load task board data');
-        } finally {
-          setLoading(false);
-        }
-      };
-      load();
-    }
-    return () => controller.abort();
-  }, [workspaceId, projectId, debouncedSearch]);
+    refetchTasks(debouncedSearch);
+  }, [debouncedSearch, refetchTasks]);
 
-  const handleOpenCreate = () => {
-    setEditingTask(null);
-    setTitle('');
-    setDescription('');
-    setPriority('MEDIUM');
-    setDeadline('');
-    setSelectedAssigneeId(user?.id || '');
-    setShowModal(true);
-  };
+  const isLoading = wsLoading || projLoading || tasksLoading || memLoading;
+  const initError = wsError || projError || tasksError;
 
-  const handleOpenEdit = (task: Task) => {
-    setEditingTask(task);
-    setTitle(task.title);
-    setDescription(task.description || '');
-    setPriority(task.priority);
-    setSelectedAssigneeId(task.assigneeId || '');
-    if (task.deadline) {
-      setDeadline(formatLocalDateTimeForInput(task.deadline));
+  const handleConcurrencyError = (err: any) => {
+    if (err?.response?.status === 409) {
+      toast.error('Task was modified by another user. Refreshing...', { duration: 4000 });
+      refetchTasks(debouncedSearch);
     } else {
-      setDeadline('');
+      toast.error(getApiErrorMessage(err, 'An error occurred'));
     }
-    setShowModal(true);
   };
 
   const handleSaveTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !user?.id) {
-      toast.error('Task title is required');
-      return;
-    }
+    if (!title.trim() || !workspaceId || !projectId) return;
+
+    const payload = {
+      title,
+      description,
+      priority,
+      deadline: deadline || null,
+      assigneeId: selectedAssigneeId || null
+    };
 
     setSaving(true);
     try {
-      const payload = {
-        title,
-        description,
-        priority,
-        deadline: deadline || null,
-        assigneeId: selectedAssigneeId || (editingTask ? editingTask.assigneeId : user?.id)
-      };
-
       if (editingTask) {
-        // Edit task
-        await apiClient.put<Task>(
-          `/workspaces/${workspaceId}/projects/${projectId}/tasks/${editingTask.id}`,
-          payload
-        );
-        await fetchTasks();
+        await taskService.update(workspaceId, projectId, editingTask.id, payload);
         toast.success('Task updated successfully');
       } else {
-        // Create task
-        await apiClient.post<Task>(
-          `/workspaces/${workspaceId}/projects/${projectId}/tasks`,
-          payload
-        );
-        await fetchTasks();
+        await taskService.create(workspaceId, projectId, payload);
         toast.success('Task created successfully');
       }
       setShowModal(false);
-    } catch (err: unknown) {
-      console.error(err);
-      toast.error(getApiErrorMessage(err, 'Failed to save task.'));
+      setEditingTask(null);
+      refetchTasks(debouncedSearch);
+    } catch (err: any) {
+      handleConcurrencyError(err);
     } finally {
       setSaving(false);
     }
   };
 
   const executeDeleteTask = async () => {
-    if (!deleteDialog.id) return;
+    if (!deleteDialog.id || !workspaceId || !projectId) return;
     try {
-      await apiClient.delete(`/workspaces/${workspaceId}/projects/${projectId}/tasks/${deleteDialog.id}`);
-      await fetchTasks();
+      await taskService.remove(workspaceId, projectId, deleteDialog.id);
       toast.success('Task deleted successfully');
-    } catch (err: unknown) {
-      console.error(err);
-      toast.error(getApiErrorMessage(err, 'Failed to delete task.'));
+      refetchTasks(debouncedSearch);
+    } catch (err: any) {
+      handleConcurrencyError(err);
     } finally {
       setDeleteDialog({ isOpen: false, id: null });
     }
   };
 
-  // Drag and drop handlers
+  const openCreateModal = () => {
+    setTitle('');
+    setDescription('');
+    setPriority('MEDIUM');
+    setDeadline('');
+    setSelectedAssigneeId(user?.id || '');
+    setEditingTask(null);
+    setShowModal(true);
+  };
+
+  const openEditModal = (task: Task) => {
+    setTitle(task.title);
+    setDescription(task.description || '');
+    setPriority(task.priority);
+    setDeadline(task.deadline ? task.deadline.slice(0, 16) : '');
+    setSelectedAssigneeId(task.assigneeId || '');
+    setEditingTask(task);
+    setShowModal(true);
+  };
+
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    setDraggingTaskId(taskId);
-    e.dataTransfer.setData('text/plain', taskId);
+    e.dataTransfer.setData('taskId', taskId);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent, targetStatus: TaskStatus) => {
     e.preventDefault();
-  };
+    if (!workspaceId || !projectId) return;
 
-  const handleDrop = async (e: React.DragEvent, newStatus: TaskStatus) => {
-    e.preventDefault();
-    const taskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
-    if (!taskId) return;
-
+    const taskId = e.dataTransfer.getData('taskId');
     const task = tasks.find(t => t.id === taskId);
-    if (!task || task.status === newStatus) return;
-    const targetColumnTasks = sortTasks(tasks.filter(t => t.status === newStatus));
-    const nextPosition = targetColumnTasks.length === 0
-      ? 0
-      : Math.max(...targetColumnTasks.map(t => t.position ?? 0)) + 1;
+    if (!task) return;
+
+    // Optimistic UI update
+    const previousTasks = [...tasks];
+    
+    // Calculate new position (put at bottom of target column)
+    const targetColumnTasks = tasks.filter(t => t.status === targetStatus && t.id !== taskId);
+    const nextPosition = targetColumnTasks.length === 0 
+      ? 1000 
+      : Math.max(...targetColumnTasks.map(t => t.position ?? 0)) + 1000;
+
+    setTasks(tasks.map(t => 
+      t.id === taskId ? { ...t, status: targetStatus, position: nextPosition } : t
+    ));
 
     try {
-      await apiClient.patch(
-        `/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}/status`,
-        { status: newStatus, position: nextPosition }
-      );
-      await fetchTasks();
-      toast.success(`Task moved to ${newStatus}`);
-    } catch (err: unknown) {
-      console.error(err);
-      toast.error('Failed to update task status. Reverting change.');
-    } finally {
-      setDraggingTaskId(null);
+      await taskService.updateStatus(workspaceId, projectId, taskId, targetStatus, nextPosition);
+    } catch (err: any) {
+      // Revert optimistic update
+      setTasks(previousTasks);
+      handleConcurrencyError(err);
     }
   };
 
   const handleStatusChangeClick = async (taskId: string, newStatus: TaskStatus) => {
+    if (!workspaceId || !projectId) return;
     const task = tasks.find(t => t.id === taskId);
     if (!task || task.status === newStatus) return;
 
+    const previousTasks = [...tasks];
+    setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+
     try {
-      await apiClient.patch<Task>(
-        `/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}/status`,
-        { status: newStatus }
-      );
-      await fetchTasks();
-      toast.success(`Status updated to ${newStatus}`);
-    } catch (err: unknown) {
-      console.error(err);
-      toast.error('Failed to update task status.');
+      await taskService.updateStatus(workspaceId, projectId, taskId, newStatus);
+    } catch (err: any) {
+      setTasks(previousTasks);
+      handleConcurrencyError(err);
     }
   };
 
-  const getPriorityBadge = (p: TaskPriority) => {
-    switch (p) {
-      case 'URGENT': return 'bg-red-50 text-red-700 border-red-200';
-      case 'HIGH': return 'bg-status-warningBg text-status-warning border-status-warning/20';
-      case 'MEDIUM': return 'bg-status-infoBg text-status-info border-status-info/20';
-      case 'LOW': return 'bg-gray-50 text-gray-600 border-cf-border';
-    }
-  };
-
-  if (loading) {
+  if (isLoading && tasks.length === 0) {
     return (
-      <div className="space-y-6 max-w-full">
-        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-cf-border pb-4 gap-4">
-          <div>
-            <div className="h-4 w-48 bg-gray-200 rounded animate-pulse mb-2" />
-            <div className="h-6 w-64 bg-gray-200 rounded animate-pulse" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {STATUSES.map((s) => (
-            <div key={s} className="bg-cf-bgLight border border-cf-border rounded p-4 min-h-[60vh]">
-              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-4" />
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white border border-cf-border rounded p-4 mb-4 shadow-cf-card">
-                  <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse mb-3" />
-                  <div className="h-3 w-full bg-gray-200 rounded animate-pulse mb-2" />
-                  <div className="h-3 w-2/3 bg-gray-200 rounded animate-pulse mb-4" />
-                  <div className="flex justify-between items-center border-t border-cf-border pt-3">
-                    <div className="h-3 w-14 bg-gray-200 rounded animate-pulse" />
-                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+      <div className="flex flex-col items-center justify-center h-64 text-cf-textMuted">
+        <Loader2 className="animate-spin mb-4" size={32} />
+        <p>Loading project board...</p>
+      </div>
+    );
+  }
+
+  if (initError) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <EmptyState
+          icon={CheckSquare}
+          title="Failed to load project board"
+          description={initError}
+          actionLabel="Try Again"
+          onAction={() => window.location.reload()}
+        />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-full">
-      {/* Board Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-cf-border pb-4 gap-4">
+    <div className="flex flex-col h-full">
+      {/* Header Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cf-border pb-4 mb-6">
         <div>
-          <div className="flex items-center space-x-2 text-xs text-cf-textMuted uppercase font-semibold tracking-wider">
-            <Link to="/workspaces" className="hover:text-cf-primary transition">Workspaces</Link>
-            <span>/</span>
-            <Link to={`/workspaces/${workspaceId}`} className="hover:text-cf-primary transition">Projects</Link>
-            <span>/</span>
+          <div className="flex items-center text-xs text-cf-textMuted mb-1 font-semibold tracking-wide uppercase">
+            <LayoutDashboard size={12} className="mr-1" />
+            <Link to={`/workspaces/${workspaceId}`} className="hover:text-cf-primary transition-colors">
+              {workspace?.name}
+            </Link>
+            <span className="mx-2">/</span>
             <span className="text-cf-textDark">{project?.name}</span>
           </div>
-          <h1 className="text-xl font-bold text-cf-textDark mt-1">{project?.name} Task Board</h1>
+          <h1 className="text-2xl font-bold text-cf-textDark flex items-center gap-2">
+            {project?.name}
+            {project?.status === 'ARCHIVED' && (
+              <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded font-mono uppercase tracking-wider">
+                Archived
+              </span>
+            )}
+          </h1>
         </div>
 
-        {workspace?.myRole !== 'VIEWER' && (
-          <Button onClick={handleOpenCreate} size="sm" className="text-xs font-semibold whitespace-nowrap">
-            <Plus size={14} className="mr-1.5" /> Add Task
-          </Button>
-        )}
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-cf-textMuted" size={16} />
-          <input
-            type="text"
-            placeholder="Search tasks by title or description..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-cf-border rounded-md text-sm focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition"
-          />
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-cf-textMuted" size={14} />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              className="w-full pl-9 pr-3 py-1.5 text-sm bg-white border border-cf-border rounded-full focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {workspace?.myRole !== 'VIEWER' && project?.status !== 'ARCHIVED' && (
+            <Button onClick={openCreateModal} size="sm" className="w-full sm:w-auto whitespace-nowrap shadow-sm">
+              <Plus size={16} className="mr-1" /> New Task
+            </Button>
+          )}
         </div>
-        <select
-          value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | 'ALL')}
-          className="px-3 py-2 bg-white border border-cf-border rounded-md text-sm text-cf-textDark focus:outline-none focus:border-cf-primary focus:ring-1 focus:ring-cf-primary transition"
-        >
-          <option value="ALL">All Priorities</option>
-          {PRIORITIES.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
       </div>
 
-      {/* Board Columns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 overflow-x-auto pb-4">
-        {STATUSES.map((status) => {
-          const statusTasks = tasks.filter(t => t.status === status && (priorityFilter === 'ALL' || t.priority === priorityFilter));
-          return (
-            <div
-              key={status}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, status)}
-              className="bg-cf-bgLight border border-cf-border rounded p-4 flex flex-col min-h-[60vh] min-w-[250px]"
-            >
-              {/* Column Header */}
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-cf-border flex-shrink-0">
-                <span className="font-bold text-xs uppercase tracking-wider text-cf-textDark">{status.replaceAll('_', ' ')}</span>
-                <span className="text-[10px] bg-cf-navy text-white px-2 py-0.5 rounded-full font-mono">{statusTasks.length}</span>
-              </div>
+      {/* Kanban Board */}
+      <div className="flex-1 overflow-x-auto pb-4 hide-scrollbar">
+        <div className="flex h-full min-w-max gap-6 px-1">
+          {STATUSES.map(status => {
+            const statusTasks = tasks.filter(t => t.status === status).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+            
+            return (
+              <div 
+                key={status} 
+                className="w-72 md:w-80 flex flex-col bg-cf-bgLight/30 rounded-xl border border-cf-border/60"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, status)}
+              >
+                {/* Column Header */}
+                <div className="p-3 border-b border-cf-border/60 flex items-center justify-between bg-cf-bgLight/50 rounded-t-xl">
+                  <h3 className="font-semibold text-sm text-cf-textDark flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${getStatusColor(status).split(' ')[0]}`}></span>
+                    {status.replaceAll('_', ' ')}
+                  </h3>
+                  <span className="text-xs font-mono bg-white text-cf-textMuted px-2 py-0.5 rounded-full border border-cf-border shadow-sm">
+                    {statusTasks.length}
+                  </span>
+                </div>
 
-              {/* Task Cards Container */}
-              <div className="flex-grow space-y-4">
-                {statusTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    draggable={workspace?.myRole !== 'VIEWER'}
-                    onDragStart={(e) => handleDragStart(e, task.id)}
-                    className="bg-white border border-cf-border rounded p-4 shadow-cf-card cursor-grab hover:shadow-md transition active:cursor-grabbing relative group"
-                  >
-                    <div className="flex items-start justify-between">
-                      <h4 className="font-bold text-sm text-cf-textDark line-clamp-2 pr-6">{task.title}</h4>
-                      {workspace?.myRole !== 'VIEWER' && (
-                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition absolute right-2 top-2 bg-white pl-1 rounded">
-                          <button
-                            onClick={() => handleOpenEdit(task)}
-                            className="p-1 text-cf-textMuted hover:text-cf-primary transition"
-                            aria-label={`Edit task ${task.title}`}
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteDialog({ isOpen: true, id: task.id })}
-                            className="p-1 text-cf-textMuted hover:text-red-600 transition"
-                            aria-label={`Delete task ${task.title}`}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-cf-textMuted mt-2 line-clamp-3 leading-relaxed">
-                      {task.description || 'No description provided.'}
-                    </p>
-
-                    <div className="mt-4 pt-3 border-t border-cf-border flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border font-mono ${getPriorityBadge(task.priority)}`}>
-                          {task.priority}
-                        </span>
+                {/* Column Body */}
+                <div className="p-3 flex-1 overflow-y-auto space-y-3 custom-scrollbar min-h-[150px]">
+                  {statusTasks.map(task => (
+                    <div
+                      key={task.id}
+                      draggable={workspace?.myRole !== 'VIEWER' && project?.status !== 'ARCHIVED'}
+                      onDragStart={(e) => handleDragStart(e, task.id)}
+                      className={`bg-white border p-3 rounded-lg shadow-sm hover:shadow-md transition-all group ${
+                        workspace?.myRole !== 'VIEWER' && project?.status !== 'ARCHIVED' ? 'cursor-grab active:cursor-grabbing hover:border-cf-primary/40' : 'cursor-default'
+                      } ${getStatusColor(task.status).split(' ')[2]}`}
+                    >
+                      <div className="flex justify-between items-start mb-2 gap-2">
+                        <h4 className="font-semibold text-sm text-cf-textDark leading-tight line-clamp-2">
+                          {task.title}
+                        </h4>
                         
-                        <div className="flex items-center space-x-1 text-[10px] text-cf-textMuted">
-                          <User size={12} className="text-cf-primary" />
-                          <span className="text-[9px] truncate max-w-[80px]" title={task.assigneeEmail || 'Unassigned'}>
-                            {task.assigneeEmail ? task.assigneeEmail.split('@')[0] : 'Unassigned'}
-                          </span>
-                        </div>
+                        {workspace?.myRole !== 'VIEWER' && project?.status !== 'ARCHIVED' && (
+                          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openEditModal(task)}
+                              className="p-1 text-cf-textMuted hover:text-cf-primary hover:bg-blue-50 rounded"
+                            >
+                              <CheckSquare size={12} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteDialog({ isOpen: true, id: task.id })}
+                              className="p-1 text-cf-textMuted hover:text-red-600 hover:bg-red-50 rounded"
+                            >
+                              <ArrowRight size={12} className="rotate-45" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
-                      {task.deadline && (
-                        <div className="text-[9px] text-cf-textMuted flex items-center gap-1">
-                          <Calendar size={11} />
-                          <span>{new Date(task.deadline).toLocaleDateString()}</span>
-                        </div>
-                      )}
+                      <p className="text-xs text-cf-textMuted line-clamp-2 mb-3 leading-relaxed">
+                        {task.description || <span className="italic opacity-60">No description</span>}
+                      </p>
 
-                      {/* Dropdown status switcher for touch/mobile devices */}
-                      {workspace?.myRole !== 'VIEWER' && (
-                        <div className="mt-2 flex items-center justify-between text-[10px] border-t border-dashed border-cf-border pt-2 md:hidden">
-                          <span className="text-cf-textMuted flex items-center gap-1">
-                            <ArrowLeftRight size={10} /> Move:
+                      <div className="mt-4 pt-3 border-t border-cf-border flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border font-mono ${getPriorityBadge(task.priority)}`}>
+                            {task.priority}
                           </span>
-                          <select
-                            value={task.status}
-                            onChange={(e) => handleStatusChangeClick(task.id, e.target.value as TaskStatus)}
-                            className="bg-cf-bgLight border border-cf-border rounded text-[9px] px-1 py-0.5 text-cf-textDark focus:outline-none"
-                          >
-                            {STATUSES.map(st => (
-                              <option key={st} value={st}>{st.replaceAll('_', ' ')}</option>
-                            ))}
-                          </select>
+                          
+                          <div className="flex items-center space-x-1 text-[10px] text-cf-textMuted">
+                            <User size={12} className="text-cf-primary" />
+                            <span className="text-[9px] truncate max-w-[80px]" title={task.assigneeEmail || 'Unassigned'}>
+                              {task.assigneeEmail ? task.assigneeEmail.split('@')[0] : 'Unassigned'}
+                            </span>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
 
-                {statusTasks.length === 0 && (
-                  <div className="border border-dashed border-cf-border/60 rounded py-8 text-center text-xs text-cf-textMuted select-none">
-                    Drag items here
-                  </div>
-                )}
+                        {task.deadline && (
+                          <div className="text-[9px] text-cf-textMuted flex items-center gap-1">
+                            <Calendar size={11} />
+                            <span>{new Date(task.deadline).toLocaleDateString()}</span>
+                          </div>
+                        )}
+
+                        {workspace?.myRole !== 'VIEWER' && project?.status !== 'ARCHIVED' && (
+                          <div className="mt-2 flex items-center justify-between text-[10px] border-t border-dashed border-cf-border pt-2 md:hidden">
+                            <span className="text-cf-textMuted flex items-center gap-1">
+                              <ArrowLeftRight size={10} /> Move:
+                            </span>
+                            <select
+                              value={task.status}
+                              onChange={(e) => handleStatusChangeClick(task.id, e.target.value as TaskStatus)}
+                              className="bg-cf-bgLight border border-cf-border rounded text-[9px] px-1 py-0.5 text-cf-textDark focus:outline-none"
+                            >
+                              {STATUSES.map(st => (
+                                <option key={st} value={st}>{st.replaceAll('_', ' ')}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {statusTasks.length === 0 && (
+                    <div className="border border-dashed border-cf-border/60 rounded py-8 text-center text-xs text-cf-textMuted select-none">
+                      Drag items here
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Task Create / Edit Modal */}
       {showModal && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cf-navy/60 backdrop-blur-sm"

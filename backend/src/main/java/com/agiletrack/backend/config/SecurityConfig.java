@@ -81,15 +81,13 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Handle comma-separated origins and add requested Vercel origin explicitly
+        // Handle comma-separated origins
         java.util.List<String> origins = new java.util.ArrayList<>();
         if (allowedOrigin != null && !allowedOrigin.isEmpty()) {
             for (String origin : allowedOrigin.split(",")) {
                 origins.add(origin.trim().replaceAll("/+$", "")); // Remove trailing slashes
             }
         }
-        origins.add("https://agile-track-ivory.vercel.app");
-        origins.add("http://localhost:5173");
         
         configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

@@ -1,5 +1,6 @@
 package com.agiletrack.backend.project.service;
 
+import com.agiletrack.backend.common.exception.BusinessRuleException;
 import com.agiletrack.backend.common.exception.ProjectNotFoundException;
 import com.agiletrack.backend.project.dto.CreateProjectRequest;
 import com.agiletrack.backend.project.dto.ProjectResponse;
@@ -66,6 +67,7 @@ public class ProjectService {
     public ProjectResponse updateProject(UUID workspaceId, UUID id, @Valid UpdateProjectRequest request) {
         workspaceService.getWorkspaceForMutation(workspaceId);
         Project project = getProject(workspaceId, id);
+        requireMutable(project);
 
         project.setName(request.name());
         project.setDescription(request.description());
@@ -76,6 +78,11 @@ public class ProjectService {
     public ProjectResponse updateProjectStatus(UUID workspaceId, UUID id, @Valid UpdateProjectStatusRequest request) {
         workspaceService.getWorkspaceForMutation(workspaceId);
         Project project = getProject(workspaceId, id);
+        
+        requireMutable(project);
+        if (!project.canTransitionTo(request.status())) {
+            throw new BusinessRuleException("Invalid project status transition: " + project.getStatus() + " -> " + request.status());
+        }
 
         project.setStatus(request.status());
         return projectMapper.toResponse(project);
@@ -85,6 +92,7 @@ public class ProjectService {
     public void deleteProject(UUID workspaceId, UUID id) {
         workspaceService.getWorkspaceForMutation(workspaceId);
         Project project = getProject(workspaceId, id);
+        requireMutable(project);
 
         projectRepository.delete(project);
     }
@@ -94,5 +102,11 @@ public class ProjectService {
         workspaceService.getWorkspaceIfMember(workspaceId);
         return projectRepository.findByIdAndWorkspaceId(projectId, workspaceId)
                 .orElseThrow(() -> new ProjectNotFoundException("Project not found"));
+    }
+
+    public void requireMutable(Project project) {
+        if (project.isArchived()) {
+            throw new BusinessRuleException("Archived projects cannot be modified");
+        }
     }
 }

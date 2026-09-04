@@ -45,4 +45,24 @@ public class Project extends BaseEntity {
     @EqualsAndHashCode.Include
     @ToString.Include
     private ProjectStatus status;
+
+    public boolean isArchived() {
+        return this.status == ProjectStatus.ARCHIVED;
+    }
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
+    public boolean canTransitionTo(ProjectStatus target) {
+        if (this.status == target) return true;
+        
+        return switch (this.status) {
+            case PLANNING -> target == ProjectStatus.ACTIVE;
+            case ACTIVE -> target == ProjectStatus.ON_HOLD || target == ProjectStatus.COMPLETED;
+            case ON_HOLD -> target == ProjectStatus.ACTIVE || target == ProjectStatus.COMPLETED;
+            case COMPLETED -> target == ProjectStatus.ARCHIVED;
+            case ARCHIVED -> false; // Terminal state
+        };
+    }
 }
